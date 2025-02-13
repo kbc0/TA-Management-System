@@ -1,9 +1,10 @@
 Procter and TA management system
-Ahed Alaryan                      	        	22201181
-Arda Kırcı                                       	22002031
-Ayşe Vildan Çetin                           	22203353
-Buğra Malkara                                	22103567
+Ahed Alaryan                      	     22201181
+Arda Kırcı                              22002031
+Ayşe Vildan Çetin                       22203353
+Buğra Malkara                           22103567
 Kamil Berkay Çetin            	        	22203156
+
 3.1 & 3.2 Motivation and Goals Behind the Project
 Our main aim is to create a web application that keeps track of and simplifies TA and Procter work for engineering classes. This program was made to decrease or eliminate the general problems that arise with TA and Procter assignments, which include conflict between assignments, a conflict in the TA’s assignment and schedule, an unfairly imbalanced workload, etc. These problems generally decrease the TA’s organization and productivity, leading to errors in grading and an increased chance of quitting the role.
 Our main goal is to create a system that keeps track of all the information a TA needs automatically and allows them to easily see the tasks they have due and the tasks they already performed, insert grades into the system that will then be put into SRS by the head TA or professor, and state their availability. The system will automatically assign tasks fairly, prioritizing the TAs who have done the least work and automatically log the tasks done to the TA’s profile, it should also distribute students into different rooms for exam days. Different restrictions will be applied for the system to work properly and smoothly, such as only allowing PHD students to be assigned to MS/PHD level courses, not assigning anything to Tas on leave, not assigning TA work in a class they are taking, and not assigning anything to a TA who has a class/exam that hour. Restrictions COULD be broken as a last resort if the required number of TAs for a specific task is not found though, but will need to be manually overridden by the head of department or the dean.
