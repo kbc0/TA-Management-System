@@ -62,7 +62,7 @@ The system supports importing student, faculty, and course data via spreadsheet 
 
 ## 3.5 Selling Points of Web Application
 Reason why users should use this app:
-- **Efficiency:** TA management is done automatically with algorithms based on the criteria and priorities, thus reducing administrative work and personnel load.//Should I mention about manual assignment  
+- **Efficiency:** TA management is done automatically with algorithms based on the criteria and priorities, thus reducing administrative work and personnel load.
 - **Balanced Management:** It distributes tasks fairly by considering the priority, permission, and workload status of each TA within and between departments.  
 - **Reporter:** At the end of the semester and year, the system helps the user by reporting system dynamics such as TA management, assignments, changes and permissions, and the TA workload resulting from the assignments.  
 - **Inclusiveness:** The system is designed to manage a large number of TAs and their workload distribution in courses, thus managing a complete department.  
