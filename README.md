@@ -79,5 +79,3 @@ There are many reasons to implement this system: It is smart, efficient, fair an
 This system does not only manage assignments, but also reports like an assistant to the authorities, tracks TAs' actions and gives reports of their work. Its sleek and user-friendly design makes the management feel like an effortless experience. It provides comfort with a system that will make you question how assignments and management were carried out without this system before.
 
 ---
-
-We are using this template
