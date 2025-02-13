@@ -10,7 +10,7 @@
 
 ---
 
-## 3.1 & 3.2 Motivation and Goals Behind the Project
+## Motivation and Goals Behind the Project
 
 Our main aim is to create a web application that keeps track of and simplifies TA and Procter work for engineering classes. This program was made to decrease or eliminate the general problems that arise with TA and Procter assignments, which include conflict between assignments, a conflict in the TA’s assignment and schedule, an unfairly imbalanced workload, etc. These problems generally decrease the TA’s organization and productivity, leading to errors in grading and an increased chance of quitting the role.
 
@@ -18,7 +18,7 @@ Our main goal is to create a system that keeps track of all the information a TA
 
 ---
 
-## 3.3 Problems that Web Application Will Solve
+## Problems that Web Application Will Solve
 - **Scheduling Conflicts & Overlaps:** TAs often get assigned duties that overlap with their own classes, or exams, causing missed tasks and last-minute scrambles. Proctoring duties can also clash with their exams, causing further stress and disruption.
 
 - **Inefficient Manual Assignment Process:** Departments often manage TA assignments manually through emails and spreadsheets, making the process inefficient and prone to errors. Without automation, tracking and balancing workloads becomes challenging.
@@ -33,7 +33,7 @@ Our main goal is to create a system that keeps track of all the information a TA
 
 ---
 
-## 3.4 Features That the Web Application Will Have
+## Features That the Web Application Will Have
 
 Our web application will offer various set of features that make it easy to manage TA tasks and proctoring assignments. Below are the main features:
 
@@ -60,7 +60,7 @@ The system supports importing student, faculty, and course data via spreadsheet 
 
 ---
 
-## 3.5 Selling Points of Web Application
+## Selling Points of Web Application
 Reason why users should use this app:
 - **Efficiency:** TA management is done automatically with algorithms based on the criteria and priorities, thus reducing administrative work and personnel load.
 - **Balanced Management:** It distributes tasks fairly by considering the priority, permission, and workload status of each TA within and between departments.  
@@ -70,12 +70,12 @@ Reason why users should use this app:
 
 ---
 
-## 3.6 What Makes This Web Application Interesting and Cool
+## What Makes This Web Application Interesting and Cool
 
 With the TA Management System, where TAs no longer have to stress about chaotic assignments, authorized users can assign tasks with just a few clicks, and fair and effective workload distribution which forms the basis of TA assignments, we find a fundamental solution to mail garbage and complex problems. 
 
-There are many reasons to implement this system: It is smart, efficient, fair and eliminates headaches in assignments. It handles complicated tasks that authorities do not want to deal with, smoothly through the system. 
+There are many reasons to implement this system: It is smart, efficient, fair ,and eliminates headaches in assignments. It handles complicated tasks that authorities do not want to deal with, smoothly through the system. 
 
-This system does not only manage assignments, but also reports like an assistant to the authorities, tracks TAs' actions and gives reports of their work. Its sleek and user-friendly design makes the management feel like an effortless experience. It provides comfort with a system that will make you question how assignments and management were carried out without this system before.
+This system not only manages assignments but also reports like an assistant to the authorities, tracks TAs' actions and gives reports of their work. Its sleek and user-friendly design makes the management feel like an effortless experience. It provides comfort with a system that will make you question how assignments and management were carried out without this system before.
 
 ---
