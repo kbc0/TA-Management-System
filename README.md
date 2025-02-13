@@ -1,10 +1,11 @@
 # Procter and TA Management System
 
-| **Ahed Alaryan**       | 22201181 |
-| **Arda Kırcı**         | 22002031 |
-| **Ayşe Vildan Çetin**  | 22203353 |
-| **Buğra Malkara**      | 22103567 |
-| **Kamil Berkay Çetin** | 22203156 |
+- **Ahed Alaryan** (22201181)
+- **Arda Kırcı** (22002031)
+- **Ayşe Vildan Çetin** (22203353)
+- **Buğra Malkara** (22103567)
+- **Kamil Berkay Çetin** (22203156)
+
 
 
 ---
