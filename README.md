@@ -18,7 +18,17 @@ Our main goal is to create a system that keeps track of all the information a TA
 
 ---
 
-## 3.3 
+## 3.3 Problems that Web Application Will Solve
+- **Scheduling Conflicts & Overlaps:** TAs often get assigned duties that overlap with their own classes, or exams, causing missed tasks and last-minute scrambles. Proctoring duties can also clash with their exams, causing further stress and disruption.
+
+- **Inefficient Manual Assignment Process:** Departments often manage TA assignments manually through emails and spreadsheets, making the process inefficient and prone to errors. Without automation, tracking and balancing workloads becomes challenging.
+
+- **Unfair Workload Distribution:** Some TAs end up overloaded while others have barely any work, leading to frustration and unfairness. Without a proper tracking system, balancing workloads is a challenge.
+
+- **Difficulties in Managing Leave Requests:** There’s no automated system to block assignments when TAs take leave for conferences, illness, or personal reasons, often leading to miscommunication and last-minute reassignments.
+
+- **Challenges in Proctoring Assignments:** Manually assigning proctors is inefficient and often leads to last-minute availability issues. There’s also no structured system to ensure fair distribution while considering course-level restrictions.
+
 
 
 ---
