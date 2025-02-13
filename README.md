@@ -1,10 +1,11 @@
-# Procter and TA management system
+# Procter and TA Management System
 
-**Ahed Alaryan**        22201181  
-**Arda Kırcı**          22002031  
-**Ayşe Vildan Çetin**   22203353  
-**Buğra Malkara**       22103567  
-**Kamil Berkay Çetin**  22203156  
+| **Ahed Alaryan**       | 22201181 |
+| **Arda Kırcı**         | 22002031 |
+| **Ayşe Vildan Çetin**  | 22203353 |
+| **Buğra Malkara**      | 22103567 |
+| **Kamil Berkay Çetin** | 22203156 |
+
 
 ---
 
@@ -16,9 +17,8 @@ Our main goal is to create a system that keeps track of all the information a TA
 
 ---
 
-## 3.3 Problems that 
+## 3.3 
 
-*(No further content provided.)*
 
 ---
 
