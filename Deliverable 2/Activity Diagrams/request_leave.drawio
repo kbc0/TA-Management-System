@@ -1,0 +1,115 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0" version="26.1.1">
+  <diagram name="Request Leave" id="g1ArZE76Lchn8xPkKqbK">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-1" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="50" y="70" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-2" value="TA Opens Leave Request Form" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="60" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-3" value="TA Fills Out Leave Details" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="60" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-4" value="System Checks for Conflicts (Tasks/Proctoring)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="60" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-5" value="Conflicts Found?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-6" value="Notify TA of Overlapping Assignments" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="60" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-7" value="TA Revises Dates or Cancels Request" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="220" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-8" value="TA Submits Leave Request" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="855" y="340" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-9" value="System Marks Request as Pending &amp; Notifies Dept. Chair" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="815" y="480" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-10" value="Dept. Chair / Staff Reviews Request" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="360" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-11" value="Approve or Reject?" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="465" y="490" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-12" value="Mark TA as Unavailable" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="275" y="600" width="150" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-13" value="Notify TA of Approval" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="690" width="150" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-14" value="Notify TA of Rejection" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="580" y="670" width="150" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-15" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;strokeWidth=3;fillColor=#FFFFFF;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="480" y="750" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-16" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-1" target="G2AuyOy3WwBtdqCdXhiR-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-17" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-2" target="G2AuyOy3WwBtdqCdXhiR-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-18" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-3" target="G2AuyOy3WwBtdqCdXhiR-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-19" value="[Yes]" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-5" target="G2AuyOy3WwBtdqCdXhiR-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-20" value="[No]" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-5" target="G2AuyOy3WwBtdqCdXhiR-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-21" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-6" target="G2AuyOy3WwBtdqCdXhiR-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-22" style="endArrow=block;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-7" target="G2AuyOy3WwBtdqCdXhiR-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="170" />
+              <mxPoint x="720" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-23" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-4" target="G2AuyOy3WwBtdqCdXhiR-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-24" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-8" target="G2AuyOy3WwBtdqCdXhiR-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-25" style="endArrow=block;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-9" target="G2AuyOy3WwBtdqCdXhiR-10">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="510" />
+              <mxPoint x="800" y="440" />
+              <mxPoint x="680" y="440" />
+              <mxPoint x="680" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-26" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-10" target="G2AuyOy3WwBtdqCdXhiR-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-27" value="[Approve]" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-11" target="G2AuyOy3WwBtdqCdXhiR-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-28" value="[Reject]" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-11" target="G2AuyOy3WwBtdqCdXhiR-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-29" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-12" target="G2AuyOy3WwBtdqCdXhiR-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-30" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-13" target="G2AuyOy3WwBtdqCdXhiR-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="G2AuyOy3WwBtdqCdXhiR-31" style="endArrow=block;" edge="1" parent="1" source="G2AuyOy3WwBtdqCdXhiR-14" target="G2AuyOy3WwBtdqCdXhiR-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
