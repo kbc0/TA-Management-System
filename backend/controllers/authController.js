@@ -1,0 +1,236 @@
+const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+const { jwtSecret, jwtExpiresIn } = require('../config/auth');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
+// Store reset tokens temporarily (In production, use a database)
+const resetTokens = {};
+
+// Set up transporter for email
+let transporter;
+
+// Check if we're in development mode
+if (process.env.NODE_ENV === 'development' || !process.env.MAIL_HOST) {
+  console.log('Using mock email transport for development');
+  // Create a mock transporter that logs emails instead of sending them
+  transporter = {
+    sendMail: async (mailOptions) => {
+      console.log('Mock email sent:');
+      console.log('To:', mailOptions.to);
+      console.log('Subject:', mailOptions.subject);
+      console.log('Content:', mailOptions.html || mailOptions.text);
+      return { messageId: 'mock-email-id-' + Date.now() };
+    }
+  };
+} else {
+  // Use real nodemailer transport for production
+  transporter = nodemailer.createTransport({
+    host: process.env.MAIL_HOST,
+    port: process.env.MAIL_PORT,
+    secure: false,
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS
+    }
+  });
+}
+
+exports.signup = async (req, res) => {
+  try {
+    const { bilkentId, email, fullName, password, role } = req.body;
+
+    // Validate input
+    if (!bilkentId || !email || !fullName || !password) {
+      return res.status(400).json({ 
+        message: 'Bilkent ID, email, full name, and password are required' 
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findByBilkentId(bilkentId);
+    if (existingUser) {
+      return res.status(409).json({ message: 'User with this Bilkent ID already exists' });
+    }
+
+    // Check if email is already in use
+    const emailExists = await User.findByEmail(email);
+    if (emailExists) {
+      return res.status(409).json({ message: 'Email is already in use' });
+    }
+    
+    // Validate Bilkent email domain if needed
+    if (!email.endsWith('@bilkent.edu.tr')) {
+      return res.status(400).json({ message: 'Please use your Bilkent email address' });
+    }
+
+    // Validate role (assuming roles are predefined)
+    const validRoles = ['ta', 'staff', 'department_chair', 'dean', 'admin']; // Match database enum values
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role specified' });
+    }
+
+    // Create new user
+    const newUser = await User.create({
+      bilkent_id: bilkentId,
+      email,
+      full_name: fullName,
+      password, // The User model should handle password hashing
+      role: role || 'ta' // Default role if not specified
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: newUser.id, bilkentId: newUser.bilkent_id, role: newUser.role },
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
+    );
+
+    // Return user data and token
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: newUser.id,
+        bilkentId: newUser.bilkent_id,
+        email: newUser.email,
+        fullName: newUser.full_name,
+        role: newUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ message: 'Server error during signup' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { bilkentId, password } = req.body;
+
+    // Validate input
+    if (!bilkentId || !password) {
+      return res.status(400).json({ message: 'ID and password are required' });
+    }
+
+    // Find user by BilkentID
+    const user = await User.findByBilkentId(bilkentId);
+
+    // Check if user exists
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Verify password
+    const isPasswordValid = await User.verifyPassword(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, bilkentId: user.bilkent_id, role: user.role },
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
+    );
+
+    // Return user data and token
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        bilkentId: user.bilkent_id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+};
+
+exports.recoverPassword = async (req, res) => {
+  try {
+    const { bilkentId } = req.body;
+
+    // Find user by BilkentID
+    const user = await User.findByBilkentId(bilkentId);
+
+    // If user doesn't exist, still show success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: 'If your ID exists, a password reset link has been sent to your email' });
+    }
+
+    // Generate a reset token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    resetTokens[bilkentId] = {
+      token: resetToken,
+      expiresAt: Date.now() + 3600000 // Token expires in 1 hour
+    };
+
+    // Create reset URL
+    const resetUrl = `http://localhost:3000/reset-password/${resetToken}?id=${bilkentId}`;
+
+    try {
+      // Send email
+      await transporter.sendMail({
+        to: user.email,
+        subject: 'Password Reset for TA Management System',
+        html: `
+          <p>Hello,</p>
+          <p>You requested a password reset for the TA Management System.</p>
+          <p>Please click the link below to reset your password:</p>
+          <a href="${resetUrl}">Reset Password</a>
+          <p>If you didn't request this, please ignore this email.</p>
+          <p>The link will expire in 1 hour.</p>
+        `
+      });
+      
+      console.log(`Password reset email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Continue with the process even if email fails
+      // In production, you might want to log this to a monitoring system
+    }
+
+    res.json({ message: 'If your ID exists, a password reset link has been sent to your email' });
+  } catch (error) {
+    console.error('Password recovery error:', error);
+    res.status(500).json({ message: 'Server error during password recovery' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, bilkentId, newPassword } = req.body;
+
+    // Check if token exists and is valid
+    if (!resetTokens[bilkentId] || 
+        resetTokens[bilkentId].token !== token || 
+        resetTokens[bilkentId].expiresAt < Date.now()) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    // Update password
+    const updated = await User.updatePassword(bilkentId, newPassword);
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove used token
+    delete resetTokens[bilkentId];
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ message: 'Server error during password reset' });
+  }
+};
+
+exports.logout = (req, res) => {
+  // JWT tokens are stateless, so we can't invalidate them on the server
+  // The client should remove the token from storage
+  res.json({ message: 'Logged out successfully' });
+};
