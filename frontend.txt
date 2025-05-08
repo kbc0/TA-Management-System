@@ -1,0 +1,1445 @@
+Project Path: frontend
+
+Source Tree:
+
+```txt
+frontend
+├── README.md
+├── package.json
+├── public
+├── src
+│   ├── App.css
+│   ├── App.test.tsx
+│   ├── App.tsx
+│   ├── api
+│   │   ├── auth.ts
+│   │   └── config.ts
+│   ├── components
+│   │   ├── auth
+│   │   └── common
+│   │       └── ProtectedRoute.tsx
+│   ├── context
+│   │   └── AuthContext.tsx
+│   ├── hooks
+│   ├── index.css
+│   ├── index.tsx
+│   ├── logo.svg
+│   ├── pages
+│   │   ├── admin
+│   │   ├── auth
+│   │   │   ├── ForgotPasswordPage.tsx
+│   │   │   ├── LogInPage.css
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── ResetPasswordPage.tsx
+│   │   │   └── SignupPage.tsx
+│   │   ├── staff
+│   │   └── ta
+│   │       └── Dashboard.tsx
+│   ├── react-app-env.d.ts
+│   ├── setupTests.ts
+│   ├── types
+│   └── utils
+└── tsconfig.json
+
+```
+
+`frontend/README.md`:
+
+```md
+# Getting Started with Create React App
+
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Available Scripts
+
+In the project directory, you can run:
+
+### `npm start`
+
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+The page will reload if you make edits.\
+You will also see any lint errors in the console.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
+
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+### `npm run eject`
+
+**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+
+If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+
+You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+```
+
+`frontend/package.json`:
+
+```json
+{
+  "name": "ta-management-system-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@types/node": "^18.15.0",
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@types/react-router-dom": "^5.3.3",
+    "axios": "^1.9.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.2",
+    "react-scripts": "^5.0.1",
+    "typescript": "^4.9.5",
+    "web-vitals": "^4.2.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^29.5.14"
+  }
+}
+
+```
+
+`frontend/src/App.css`:
+
+```css
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+```
+
+`frontend/src/App.test.tsx`:
+
+```tsx
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+
+```
+
+`frontend/src/App.tsx`:
+
+```tsx
+// src/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/common/ProtectedRoute';
+
+// Auth Pages
+import LoginPage from './pages/auth/LoginPage';
+import SignupPage from './pages/auth/SignupPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+
+// Dashboard Pages
+import TADashboard from './pages/ta/Dashboard';
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          
+          {/* Protected TA Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
+            <Route path="/ta/dashboard" element={<TADashboard />} />
+          </Route>
+          
+          {/* Catch all route - redirect to login */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+};
+
+export default App;
+
+```
+
+`frontend/src/api/auth.ts`:
+
+```ts
+// src/api/auth.ts
+import { apiUrl } from './config';
+
+interface LoginCredentials {
+  bilkentId: string;
+  password: string;
+}
+
+interface SignupData {
+  bilkentId: string;
+  email: string;
+  fullName: string;
+  password: string;
+  role?: string;
+}
+
+interface RecoverPasswordData {
+  bilkentId: string;
+}
+
+interface ResetPasswordData {
+  token: string;
+  bilkentId: string;
+  newPassword: string;
+}
+
+export const login = async (credentials: LoginCredentials) => {
+  const response = await fetch(`${apiUrl}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Login failed');
+  }
+
+  return await response.json();
+};
+
+export const signup = async (data: SignupData) => {
+  const response = await fetch(`${apiUrl}/auth/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Signup failed');
+  }
+
+  return await response.json();
+};
+
+export const recoverPassword = async (data: RecoverPasswordData) => {
+  const response = await fetch(`${apiUrl}/auth/recover-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Password recovery failed');
+  }
+
+  return await response.json();
+};
+
+export const resetPassword = async (data: ResetPasswordData) => {
+  const response = await fetch(`${apiUrl}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Password reset failed');
+  }
+
+  return await response.json();
+};
+
+export const logout = async (token: string) => {
+  const response = await fetch(`${apiUrl}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Logout failed');
+  }
+
+  return await response.json();
+};
+
+```
+
+`frontend/src/api/config.ts`:
+
+```ts
+// src/api/config.ts
+export const apiUrl = 'http://localhost:5001/api';
+
+```
+
+`frontend/src/components/common/ProtectedRoute.tsx`:
+
+```tsx
+// src/components/common/ProtectedRoute.tsx
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
+interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // If roles are specified and user doesn't have an allowed role, redirect to appropriate dashboard
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    switch (user.role) {
+      case 'admin':
+        return <Navigate to="/admin/dashboard" replace />;
+      case 'ta':
+        return <Navigate to="/ta/dashboard" replace />;
+      case 'staff':
+        return <Navigate to="/staff/dashboard" replace />;
+      case 'department_chair':
+        return <Navigate to="/chair/dashboard" replace />;
+      case 'dean':
+        return <Navigate to="/dean/dashboard" replace />;
+      default:
+        return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // If all checks pass, render the child routes
+  return <Outlet />;
+};
+
+export default ProtectedRoute;
+
+```
+
+`frontend/src/context/AuthContext.tsx`:
+
+```tsx
+// src/context/AuthContext.tsx
+import React, { createContext, useState, useEffect, useContext } from 'react';
+
+interface User {
+  id: number;
+  bilkentId: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+interface AuthContextType {
+  isAuthenticated: boolean;
+  user: User | null;
+  login: (token: string, user: User) => void;
+  logout: () => void;
+}
+
+// Create a context with a default value
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  user: null,
+  login: () => {},
+  logout: () => {},
+});
+
+// Custom hook to use the auth context
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setIsAuthenticated(true);
+      } catch (e) {
+        // If there's an error parsing the user data, log out
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
+
+  // Login function
+  const login = (token: string, userData: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  // Logout function
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Call the logout API
+        await fetch('http://localhost:5001/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      // Clear local storage and state
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+```
+
+`frontend/src/index.css`:
+
+```css
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+```
+
+`frontend/src/index.tsx`:
+
+```tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+//import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+//reportWebVitals();
+
+```
+
+`frontend/src/logo.svg`:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 841.9 595.3"><g fill="#61DAFB"><path d="M666.3 296.5c0-32.5-40.7-63.3-103.1-82.4 14.4-63.6 8-114.2-20.2-130.4-6.5-3.8-14.1-5.6-22.4-5.6v22.3c4.6 0 8.3.9 11.4 2.6 13.6 7.8 19.5 37.5 14.9 75.7-1.1 9.4-2.9 19.3-5.1 29.4-19.6-4.8-41-8.5-63.5-10.9-13.5-18.5-27.5-35.3-41.6-50 32.6-30.3 63.2-46.9 84-46.9V78c-27.5 0-63.5 19.6-99.9 53.6-36.4-33.8-72.4-53.2-99.9-53.2v22.3c20.7 0 51.4 16.5 84 46.6-14 14.7-28 31.4-41.3 49.9-22.6 2.4-44 6.1-63.6 11-2.3-10-4-19.7-5.2-29-4.7-38.2 1.1-67.9 14.6-75.8 3-1.8 6.9-2.6 11.5-2.6V78.5c-8.4 0-16 1.8-22.6 5.6-28.1 16.2-34.4 66.7-19.9 130.1-62.2 19.2-102.7 49.9-102.7 82.3 0 32.5 40.7 63.3 103.1 82.4-14.4 63.6-8 114.2 20.2 130.4 6.5 3.8 14.1 5.6 22.5 5.6 27.5 0 63.5-19.6 99.9-53.6 36.4 33.8 72.4 53.2 99.9 53.2 8.4 0 16-1.8 22.6-5.6 28.1-16.2 34.4-66.7 19.9-130.1 62-19.1 102.5-49.9 102.5-82.3zm-130.2-66.7c-3.7 12.9-8.3 26.2-13.5 39.5-4.1-8-8.4-16-13.1-24-4.6-8-9.5-15.8-14.4-23.4 14.2 2.1 27.9 4.7 41 7.9zm-45.8 106.5c-7.8 13.5-15.8 26.3-24.1 38.2-14.9 1.3-30 2-45.2 2-15.1 0-30.2-.7-45-1.9-8.3-11.9-16.4-24.6-24.2-38-7.6-13.1-14.5-26.4-20.8-39.8 6.2-13.4 13.2-26.8 20.7-39.9 7.8-13.5 15.8-26.3 24.1-38.2 14.9-1.3 30-2 45.2-2 15.1 0 30.2.7 45 1.9 8.3 11.9 16.4 24.6 24.2 38 7.6 13.1 14.5 26.4 20.8 39.8-6.3 13.4-13.2 26.8-20.7 39.9zm32.3-13c5.4 13.4 10 26.8 13.8 39.8-13.1 3.2-26.9 5.9-41.2 8 4.9-7.7 9.8-15.6 14.4-23.7 4.6-8 8.9-16.1 13-24.1zM421.2 430c-9.3-9.6-18.6-20.3-27.8-32 9 .4 18.2.7 27.5.7 9.4 0 18.7-.2 27.8-.7-9 11.7-18.3 22.4-27.5 32zm-74.4-58.9c-14.2-2.1-27.9-4.7-41-7.9 3.7-12.9 8.3-26.2 13.5-39.5 4.1 8 8.4 16 13.1 24 4.7 8 9.5 15.8 14.4 23.4zM420.7 163c9.3 9.6 18.6 20.3 27.8 32-9-.4-18.2-.7-27.5-.7-9.4 0-18.7.2-27.8.7 9-11.7 18.3-22.4 27.5-32zm-74 58.9c-4.9 7.7-9.8 15.6-14.4 23.7-4.6 8-8.9 16-13 24-5.4-13.4-10-26.8-13.8-39.8 13.1-3.1 26.9-5.8 41.2-7.9zm-90.5 125.2c-35.4-15.1-58.3-34.9-58.3-50.6 0-15.7 22.9-35.6 58.3-50.6 8.6-3.7 18-7 27.7-10.1 5.7 19.6 13.2 40 22.5 60.9-9.2 20.8-16.6 41.1-22.2 60.6-9.9-3.1-19.3-6.5-28-10.2zM310 490c-13.6-7.8-19.5-37.5-14.9-75.7 1.1-9.4 2.9-19.3 5.1-29.4 19.6 4.8 41 8.5 63.5 10.9 13.5 18.5 27.5 35.3 41.6 50-32.6 30.3-63.2 46.9-84 46.9-4.5-.1-8.3-1-11.3-2.7zm237.2-76.2c4.7 38.2-1.1 67.9-14.6 75.8-3 1.8-6.9 2.6-11.5 2.6-20.7 0-51.4-16.5-84-46.6 14-14.7 28-31.4 41.3-49.9 22.6-2.4 44-6.1 63.6-11 2.3 10.1 4.1 19.8 5.2 29.1zm38.5-66.7c-8.6 3.7-18 7-27.7 10.1-5.7-19.6-13.2-40-22.5-60.9 9.2-20.8 16.6-41.1 22.2-60.6 9.9 3.1 19.3 6.5 28.1 10.2 35.4 15.1 58.3 34.9 58.3 50.6-.1 15.7-23 35.6-58.4 50.6zM320.8 78.4z"/><circle cx="420.9" cy="296.5" r="45.7"/><path d="M520.5 78.1z"/></g></svg>
+```
+
+`frontend/src/pages/auth/ForgotPasswordPage.tsx`:
+
+```tsx
+// src/pages/auth/ForgotPasswordPage.tsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../auth/LogInPage.css"; // Reuse the login CSS
+
+const ForgotPasswordPage: React.FC = () => {
+  const [bilkentId, setBilkentId] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (): Promise<void> => {
+    // Reset messages
+    setError("");
+    setMessage("");
+
+    // Validation
+    if (!bilkentId) {
+      setError("Please enter your Bilkent ID");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Call the backend API
+      const response = await fetch('http://localhost:5001/api/auth/recover-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bilkentId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Password recovery failed');
+      }
+
+      setMessage("If your ID exists, a password reset link has been sent to your email");
+      // After a delay, redirect to login
+      setTimeout(() => {
+        navigate('/');
+      }, 5000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-background">
+      <div className="login-box">
+        <img
+          src="/bilkent-logo.jpg"
+          alt="Bilkent Logo"
+          className="login-logo"
+        />
+        <h2 className="login-title">Recover Password</h2>
+
+        <div className="input-group">
+          <label>Bilkent ID</label>
+          <input
+            type="text"
+            placeholder="Enter your Bilkent ID"
+            value={bilkentId}
+            onChange={(e) => setBilkentId(e.target.value)}
+            className={error ? "input-error" : ""}
+          />
+        </div>
+
+        {error && <p className="error-text">{error}</p>}
+        {message && <p style={{ color: 'green', marginBottom: '15px' }}>{message}</p>}
+
+        <button 
+          className="login-button" 
+          onClick={handleSubmit}
+          disabled={isLoading || message !== ""}
+        >
+          {isLoading ? "Sending..." : "Reset Password"}
+        </button>
+
+        <button
+          className="forgot-password"
+          onClick={() => navigate("/")}
+          disabled={isLoading}
+        >
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ForgotPasswordPage;
+
+```
+
+`frontend/src/pages/auth/LogInPage.css`:
+
+```css
+/* Arka plan: eflatun-mavi degrade */
+.login-background {
+    background: linear-gradient(135deg, #0f4c81, #3a78c3);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* Ortadaki login kutusu */
+  .login-box {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 12px;
+    width: 350px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  /* Logo */
+  .login-logo {
+    width: 200px;
+    height: auto;
+    margin-bottom: 20px;
+    object-fit: contain;
+  }
+  
+  /* Başlık */
+  .login-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #1f1f1f;
+  }
+  
+  /* Input grubu */
+  .input-group {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .input-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #444;
+  }
+  
+  .input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+  }
+  
+  .input-group input:focus {
+    outline: none;
+    border-color: #3a78c3;
+  }
+  
+  /* Hatalı input */
+  .input-error {
+    border-color: #e63946;
+  }
+  
+  .error-text {
+    font-size: 12px;
+    color: #e63946;
+    margin-top: 5px;
+  }
+  
+  /* Şifre kutusu ve göz ikonu */
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-wrapper input {
+    width: calc(100% - 40px);
+    padding-right: 40px;
+    box-sizing: border-box;
+  }
+  
+  .toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    user-select: none;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  
+  /* Login butonu */
+  .login-button {
+    width: 100%;
+    background-color: #3a78c3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+  }
+  
+  .login-button:active {
+    background-color: #2d5fa6;
+    transform: scale(0.97);
+  }
+  
+  /* Forgot password */
+  .forgot-password {
+    margin-top: 15px;
+    background: none;
+    border: none;
+    color: #3a78c3;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  /* Fade animasyonu */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+```
+
+`frontend/src/pages/auth/LoginPage.tsx`:
+
+```tsx
+// src/pages/auth/LoginPage.tsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./LogInPage.css";
+
+const LoginPage: React.FC = () => {
+  const [bilkentID, setBilkentID] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  const handleLogin = async (): Promise<void> => {
+    // Reset errors
+    setError("");
+    
+    // Validate input
+    if (!bilkentID || !password) {
+      setError("Please enter both Bilkent ID and password");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Call the backend API
+      const response = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bilkentId: bilkentID, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store token and user info in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Redirect based on user role
+      switch (data.user.role) {
+        case 'admin':
+          navigate("/admin/dashboard");
+          break;
+        case 'ta':
+          navigate("/ta/dashboard");
+          break;
+        case 'staff':
+          navigate("/staff/dashboard");
+          break;
+        case 'department_chair':
+          navigate("/chair/dashboard");
+          break;
+        case 'dean':
+          navigate("/dean/dashboard");
+          break;
+        default:
+          navigate("/dashboard");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePasswordVisibility = (): void => {
+    setShowPassword((prev) => !prev);
+  };
+
+  return (
+    <div className="login-background">
+      <div className="login-box">
+        <img
+          src="/bilkent-logo.png"
+          alt="Bilkent Logo"
+          className="login-logo"
+        />
+        <h2 className="login-title">TA Management System</h2>
+
+        <div className="input-group">
+          <label>Bilkent ID</label>
+          <input
+            type="text"
+            placeholder="Enter your Bilkent ID"
+            value={bilkentID}
+            onChange={(e) => setBilkentID(e.target.value)}
+            className={error ? "input-error" : ""}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Password</label>
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={error ? "input-error" : ""}
+            />
+            <span
+              className="toggle-password"
+              onClick={togglePasswordVisibility}
+              role="button"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </span>
+          </div>
+          {error && <p className="error-text">{error}</p>}
+        </div>
+
+        <button 
+          className="login-button" 
+          onClick={handleLogin} 
+          disabled={isLoading}
+        >
+          {isLoading ? "Logging in..." : "Login"}
+        </button>
+
+        <button
+          className="forgot-password"
+          onClick={() => navigate("/forgot-password")}
+          disabled={isLoading}
+        >
+          Forgot Password?
+        </button>
+        
+        <div style={{ marginTop: '20px' }}>
+          <span style={{ fontSize: '14px' }}>Don't have an account? </span>
+          <button
+            className="forgot-password"
+            onClick={() => navigate("/signup")}
+            style={{ marginTop: '0' }}
+            disabled={isLoading}
+          >
+            Sign Up
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
+
+```
+
+`frontend/src/pages/auth/ResetPasswordPage.tsx`:
+
+```tsx
+// src/pages/auth/ResetPasswordPage.tsx
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import "../auth/LogInPage.css"; // Reuse the login CSS
+
+const ResetPasswordPage: React.FC = () => {
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [token, setToken] = useState<string>("");
+  const [bilkentId, setBilkentId] = useState<string>("");
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Get token and ID from the URL
+    const searchParams = new URLSearchParams(location.search);
+    const id = searchParams.get('id');
+    const resetToken = location.pathname.split('/')[2]; // Assuming the URL is /reset-password/:token
+    
+    if (!id || !resetToken) {
+      setError("Invalid reset link. Please request a new one.");
+      return;
+    }
+    
+    setBilkentId(id);
+    setToken(resetToken);
+  }, [location]);
+
+  const handleSubmit = async (): Promise<void> => {
+    // Reset messages
+    setError("");
+    setMessage("");
+
+    // Validation
+    if (!password || !confirmPassword) {
+      setError("Please enter and confirm your new password");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Call the backend API
+      const response = await fetch('http://localhost:5001/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          bilkentId,
+          newPassword: password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Password reset failed');
+      }
+
+      setMessage("Password has been reset successfully. Redirecting to login...");
+      // After a delay, redirect to login
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePasswordVisibility = (): void => {
+    setShowPassword((prev) => !prev);
+  };
+
+  return (
+    <div className="login-background">
+      <div className="login-box">
+        <img
+          src="/bilkent-logo.jpg"
+          alt="Bilkent Logo"
+          className="login-logo"
+        />
+        <h2 className="login-title">Reset Password</h2>
+
+        {error && error.includes("Invalid reset link") ? (
+          <div>
+            <p className="error-text">{error}</p>
+            <button
+              className="login-button"
+              onClick={() => navigate("/forgot-password")}
+              style={{ marginTop: '20px' }}
+            >
+              Request New Link
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="input-group">
+              <label>New Password</label>
+              <div className="password-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter new password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={error ? "input-error" : ""}
+                />
+                <span
+                  className="toggle-password"
+                  onClick={togglePasswordVisibility}
+                  role="button"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </span>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Confirm New Password</label>
+              <div className="password-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={error ? "input-error" : ""}
+                />
+              </div>
+            </div>
+
+            {error && <p className="error-text">{error}</p>}
+            {message && <p style={{ color: 'green', marginBottom: '15px' }}>{message}</p>}
+
+            <button 
+              className="login-button" 
+              onClick={handleSubmit}
+              disabled={isLoading || message !== ""}
+            >
+              {isLoading ? "Resetting..." : "Reset Password"}
+            </button>
+          </>
+        )}
+
+        <button
+          className="forgot-password"
+          onClick={() => navigate("/")}
+        >
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ResetPasswordPage;
+
+```
+
+`frontend/src/pages/auth/SignupPage.tsx`:
+
+```tsx
+// src/pages/auth/SignupPage.tsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../auth/LogInPage.css"; // Reuse the login CSS
+
+const SignupPage: React.FC = () => {
+  const [bilkentId, setBilkentId] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  const handleSignup = async (): Promise<void> => {
+    // Reset error
+    setError("");
+
+    // Validation
+    if (!bilkentId || !email || !fullName || !password || !confirmPassword) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!email.endsWith('@bilkent.edu.tr')) {
+      setError("Please use your Bilkent email address");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Call the backend API
+      const response = await fetch('http://localhost:5001/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bilkentId,
+          email,
+          fullName,
+          password,
+          role: 'ta' // Default role
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      // Store token and user info
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Redirect to the appropriate dashboard
+      navigate('/ta/dashboard');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePasswordVisibility = (): void => {
+    setShowPassword((prev) => !prev);
+  };
+
+  return (
+    <div className="login-background">
+      <div className="login-box" style={{ width: '400px' }}>
+        <img
+          src="/bilkent-logo.jpg"
+          alt="Bilkent Logo"
+          className="login-logo"
+        />
+        <h2 className="login-title">Sign Up</h2>
+
+        <div className="input-group">
+          <label>Bilkent ID</label>
+          <input
+            type="text"
+            placeholder="Enter your Bilkent ID"
+            value={bilkentId}
+            onChange={(e) => setBilkentId(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Email</label>
+          <input
+            type="email"
+            placeholder="Enter your Bilkent email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Full Name</label>
+          <input
+            type="text"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Password</label>
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <span
+              className="toggle-password"
+              onClick={togglePasswordVisibility}
+              role="button"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </span>
+          </div>
+        </div>
+
+        <div className="input-group">
+          <label>Confirm Password</label>
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {error && <p className="error-text">{error}</p>}
+
+        <button 
+          className="login-button" 
+          onClick={handleSignup}
+          disabled={isLoading}
+        >
+          {isLoading ? "Signing up..." : "Sign Up"}
+        </button>
+
+        <div style={{ marginTop: '20px' }}>
+          <span style={{ fontSize: '14px' }}>Already have an account? </span>
+          <button
+            className="forgot-password"
+            onClick={() => navigate("/")}
+            style={{ marginTop: '0' }}
+            disabled={isLoading}
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SignupPage;
+
+```
+
+`frontend/src/pages/ta/Dashboard.tsx`:
+
+```tsx
+// src/pages/ta/Dashboard.tsx
+import React from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+const TADashboard: React.FC = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>TA Dashboard</h1>
+      <p>Welcome, {user?.fullName}</p>
+      <p>Bilkent ID: {user?.bilkentId}</p>
+      <p>Email: {user?.email}</p>
+      <p>Role: {user?.role}</p>
+      
+      <div style={{ marginTop: '20px' }}>
+        <h2>My Tasks</h2>
+        <p>No tasks available yet.</p>
+      </div>
+      
+      <div style={{ marginTop: '20px' }}>
+        <h2>My Schedule</h2>
+        <p>No scheduled events yet.</p>
+      </div>
+      
+      <button 
+        onClick={handleLogout}
+        style={{
+          marginTop: '20px',
+          padding: '10px 15px',
+          backgroundColor: '#3a78c3',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Logout
+      </button>
+    </div>
+  );
+};
+
+export default TADashboard;
+
+```
+
+`frontend/src/react-app-env.d.ts`:
+
+```ts
+/// <reference types="react-scripts" />
+
+```
+
+`frontend/src/setupTests.ts`:
+
+```ts
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom';
+
+```
+
+`frontend/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src"
+  ]
+}
+
+```
