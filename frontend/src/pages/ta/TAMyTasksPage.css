@@ -1,0 +1,227 @@
+/* TAMyTasksPage.css */
+.role-ta {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+   /*padding-top: 100px; /* navbar yüksekliği kadar */
+
+}
+
+.calendar-day {
+  position: relative;
+  height: 120px;
+  vertical-align: top;
+  padding: 8px;
+  background-color: white;
+}
+
+.calendar-day.has-event {
+  background-color: #f8f9fa;
+}
+
+.custom-task-header {
+  /*margin-top: 110px !important;*/
+  padding-top: 20px;
+}
+
+.calendar-day .date {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #495057;
+}
+
+.calendar-event {
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 2px 0;
+  font-size: 0.85em;
+  color: #1976d2;
+  border: 1px solid #90caf9;
+}
+
+
+.current-day {
+  background-color: #e3f2fd !important;
+  border: 2px solid #2196f3 !important;
+  position: relative;
+}
+
+.current-day .date {
+  color: #2196f3 !important;
+  font-weight: bold;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.month-year-display {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.list-group-item {
+  padding: 1rem;
+  border-left: none;
+  border-right: none;
+  transition: background-color 0.2s;
+  position: relative; /* for badge positioning */
+}
+
+.list-group-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* Reset badge positioning inside list items */
+.list-group-item .badge {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  margin: 0 !important;
+  float: none;
+}
+
+.badge {
+  font-size: 0.75em;
+  padding: 0.5em 0.75em;
+  font-weight: 600;
+}
+
+.bg-warning {
+  background-color: #fff3cd !important;
+  color: #856404;
+}
+
+.bg-success {
+  background-color: #d4edda !important;
+  color: #155724;
+}
+
+.modal-content {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.text-primary {
+  color: #0d6efd !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.main-content {
+  margin-top: 20px;
+}
+
+.navbar-nav .nav-link {
+  transition: all 0.3s ease;
+  position: relative;
+  margin: 0 10px;
+  
+}
+
+.navbar.navbar-expand-lg {
+  overflow: visible !important;
+}
+
+.navbar-nav .nav-link.active {
+  font-weight: 600;
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+.navbar {
+  z-index: 1030; /* Diğer elementlerden daha yüksek */
+}
+
+.navbar-nav .nav-link:hover:not(.active) {
+  transform: translateY(-2px);
+}
+
+.navbar-collapse {
+  overflow: visible !important;
+}
+
+.notification-badge {
+  position: relative;
+  top: -8px;
+  right: -5px;
+  font-size: 0.7em;
+}
+
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.navbar-toggler {
+  border-color: rgba(255,255,255,0.5);
+}
+
+.navbar-toggler:focus {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+}
+
+/* Logo ile yazı arasındaki boşluğu ayarlama */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.user-info {
+  position: relative;
+  margin-left: auto;
+}
+
+.username {
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.username:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-width: 160px;
+  margin-top: 5px;
+  .user-dropdown {
+  z-index: 1050; /* Navbar'dan daha yüksek */
+}
+}
+
+.user-dropdown .dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #212529;
+}
+
+/* Hover efekti */
+.dropdown-item {
+  padding: 8px 16px;
+  color: #212529;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
