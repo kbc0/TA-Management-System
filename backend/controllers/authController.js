@@ -4,6 +4,7 @@ const { jwtSecret, jwtExpiresIn } = require('../config/auth');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const loggingService = require('../services/LoggingService');
+const { ROLES, isValidRole, getPermissionsForRole } = require('../config/roles');
 
 // Store reset tokens temporarily (In production, use a database)
 const resetTokens = {};
@@ -65,9 +66,8 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'Please use your Bilkent email address' });
     }
 
-    // Validate role (assuming roles are predefined)
-    const validRoles = ['ta', 'staff', 'department_chair', 'dean', 'admin']; // Match database enum values
-    if (role && !validRoles.includes(role)) {
+    // Validate role using our role configuration
+    if (role && !isValidRole(role)) {
       return res.status(400).json({ message: 'Invalid role specified' });
     }
 
@@ -77,12 +77,20 @@ exports.signup = async (req, res) => {
       email,
       full_name: fullName,
       password, // The User model should handle password hashing
-      role: role || 'ta' // Default role if not specified
+      role: role || ROLES.TEACHING_ASSISTANT // Default role if not specified
     });
 
+    // Get permissions for the user's role
+    const permissions = getPermissionsForRole(newUser.role);
+    
     // Generate JWT token
     const token = jwt.sign(
-      { id: newUser.id, bilkentId: newUser.bilkent_id, role: newUser.role },
+      { 
+        id: newUser.id, 
+        bilkentId: newUser.bilkent_id, 
+        role: newUser.role,
+        permissions: permissions
+      },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -96,7 +104,8 @@ exports.signup = async (req, res) => {
         bilkentId: newUser.bilkent_id,
         email: newUser.email,
         fullName: newUser.full_name,
-        role: newUser.role
+        role: newUser.role,
+        permissions: permissions
       }
     });
     
@@ -147,9 +156,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Get permissions for the user's role
+    const permissions = getPermissionsForRole(user.role);
+    
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, bilkentId: user.bilkent_id, role: user.role },
+      { 
+        id: user.id, 
+        bilkentId: user.bilkent_id, 
+        role: user.role,
+        permissions: permissions
+      },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -162,7 +179,8 @@ exports.login = async (req, res) => {
         bilkentId: user.bilkent_id,
         email: user.email,
         fullName: user.full_name,
-        role: user.role
+        role: user.role,
+        permissions: permissions
       }
     });
     

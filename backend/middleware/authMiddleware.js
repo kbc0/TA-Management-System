@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { jwtSecret } = require('../config/auth');
 const User = require('../models/User');
 const loggingService = require('../services/LoggingService');
+const { getPermissionsForRole } = require('../config/roles');
 
 exports.authenticate = async (req, res, next) => {
   try {
@@ -22,12 +23,16 @@ exports.authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
+    // Get permissions for the user's role
+    const permissions = getPermissionsForRole(user.role);
+    
     // Add user to request object
     req.user = {
       id: user.id,
       bilkentId: user.bilkent_id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      permissions: permissions
     };
 
     next();
@@ -57,7 +62,7 @@ exports.authenticate = async (req, res, next) => {
   }
 };
 
-// Role-based authorization middleware
+// Role-based authorization middleware (legacy approach)
 exports.authorize = (...roles) => {
   return async (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
@@ -96,5 +101,39 @@ exports.authorize = (...roles) => {
   };
 };
 
+// Get current user profile with permissions
+exports.getCurrentUser = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    // Get full user profile with permissions
+    const user = await User.findByIdWithPermissions(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Return user data without sensitive information
+    res.json({
+      user: {
+        id: user.id,
+        bilkentId: user.bilkent_id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        permissions: user.permissions
+      }
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // For backward compatibility
 exports.protect = exports.authenticate;
+
+// Export available roles
+exports.getRoles = () => User.getRoles();
