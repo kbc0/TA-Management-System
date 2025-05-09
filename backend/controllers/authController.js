@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { jwtSecret, jwtExpiresIn } = require('../config/auth');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const loggingService = require('../services/LoggingService');
 
 // Store reset tokens temporarily (In production, use a database)
 const resetTokens = {};
@@ -98,8 +99,27 @@ exports.signup = async (req, res) => {
         role: newUser.role
       }
     });
+    
+    // Log the signup event
+    await loggingService.logAuth(
+      'signup',
+      newUser,
+      `User ${newUser.bilkent_id} registered successfully`,
+      { role: newUser.role, email: newUser.email },
+      req
+    );
   } catch (error) {
     console.error('Signup error:', error);
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during user signup',
+      req
+    );
+    
     res.status(500).json({ message: 'Server error during signup' });
   }
 };
@@ -145,8 +165,27 @@ exports.login = async (req, res) => {
         role: user.role
       }
     });
+    
+    // Log the login event
+    await loggingService.logAuth(
+      'login',
+      user,
+      `User ${user.bilkent_id} logged in successfully`,
+      { role: user.role },
+      req
+    );
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during user login',
+      req
+    );
+    
     res.status(500).json({ message: 'Server error during login' });
   }
 };
@@ -196,8 +235,29 @@ exports.recoverPassword = async (req, res) => {
     }
 
     res.json({ message: 'If your ID exists, a password reset link has been sent to your email' });
+    
+    // Only log if user exists
+    if (user) {
+      await loggingService.logAuth(
+        'password_recovery_request',
+        user,
+        `Password recovery requested for user ${user.bilkent_id}`,
+        { email: user.email },
+        req
+      );
+    }
   } catch (error) {
     console.error('Password recovery error:', error);
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during password recovery',
+      req
+    );
+    
     res.status(500).json({ message: 'Server error during password recovery' });
   }
 };
@@ -223,14 +283,47 @@ exports.resetPassword = async (req, res) => {
     delete resetTokens[bilkentId];
 
     res.json({ message: 'Password has been reset successfully' });
+    
+    // Log the password reset event
+    const user = await User.findByBilkentId(bilkentId);
+    if (user) {
+      await loggingService.logAuth(
+        'password_reset',
+        user,
+        `Password reset successful for user ${bilkentId}`,
+        { timestamp: new Date().toISOString() },
+        req
+      );
+    }
   } catch (error) {
     console.error('Password reset error:', error);
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during password reset',
+      req
+    );
+    
     res.status(500).json({ message: 'Server error during password reset' });
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
   // JWT tokens are stateless, so we can't invalidate them on the server
   // The client should remove the token from storage
   res.json({ message: 'Logged out successfully' });
+  
+  // Log the logout event if we have user info
+  if (req.user) {
+    await loggingService.logAuth(
+      'logout',
+      req.user,
+      `User ${req.user.bilkent_id} logged out`,
+      { timestamp: new Date().toISOString() },
+      req
+    );
+  }
 };

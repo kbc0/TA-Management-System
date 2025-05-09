@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require('../config/auth');
 const User = require('../models/User');
+const loggingService = require('../services/LoggingService');
 
-exports.protect = async (req, res, next) => {
+exports.authenticate = async (req, res, next) => {
   try {
     // Get token from header
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -32,6 +33,20 @@ exports.protect = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
+    
+    // Log authentication failure
+    await loggingService.log({
+      action: 'authentication_failure',
+      entity: 'user',
+      description: `Authentication failed: ${error.name || 'Unknown error'}`,
+      metadata: {
+        error: error.message,
+        errorType: error.name,
+        path: req.originalUrl,
+        method: req.method
+      }
+    }, req);
+    
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Invalid token' });
     }
@@ -44,10 +59,42 @@ exports.protect = async (req, res, next) => {
 
 // Role-based authorization middleware
 exports.authorize = (...roles) => {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
+      // Log authorization failure
+      await loggingService.log({
+        action: 'authorization_failure',
+        entity: 'user',
+        entity_id: req.user?.bilkentId || 'unknown',
+        user_id: req.user?.bilkentId || 'unknown',
+        description: `Authorization failed: User role ${req.user?.role || 'unknown'} not in allowed roles [${roles.join(', ')}]`,
+        metadata: {
+          requiredRoles: roles,
+          userRole: req.user?.role || 'unknown',
+          path: req.originalUrl,
+          method: req.method
+        }
+      }, req);
+      
       return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
     }
+    
+    // Log successful authorization (optional, can be commented out if too verbose)
+    await loggingService.log({
+      action: 'authorization_success',
+      entity: 'user',
+      entity_id: req.user.bilkentId,
+      user_id: req.user.bilkentId,
+      description: `User authorized for ${req.method} ${req.originalUrl}`,
+      metadata: {
+        userRole: req.user.role,
+        allowedRoles: roles
+      }
+    }, req);
+    
     next();
   };
 };
+
+// For backward compatibility
+exports.protect = exports.authenticate;
