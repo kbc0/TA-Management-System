@@ -1,7 +1,7 @@
 // src/components/tasks/TaskForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Task, TaskCreateData, getTaskById, createTask, updateTask } from '../../api/tasks';
+import { TaskCreateData, getTaskById, createTask, updateTask } from '../../api/tasks';
 import './TaskForm.css';
 
 interface TaskFormProps {
@@ -26,7 +26,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
   const [availableAssignees, setAvailableAssignees] = useState<any[]>([]);
 
   useEffect(() => {
-    // Get current user from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -34,33 +33,24 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
         setUser(parsedUser);
       } catch (err) {
         console.error('Error parsing user data:', err);
+        setError('Could not load user data for permission check.');
       }
     }
 
-    // Fetch task details if in edit mode
     const fetchTaskDetails = async () => {
       if (mode === 'edit' && id) {
         try {
           setLoading(true);
           const taskData = await getTaskById(parseInt(id));
-          
-          // Set form fields
           setTitle(taskData.title);
           setDescription(taskData.description || '');
           setTaskType(taskData.task_type);
           setCourseId(taskData.course_id);
-          
-          // Format date for the input element (YYYY-MM-DD)
-          const dueDate = new Date(taskData.due_date);
-          const formattedDate = dueDate.toISOString().split('T')[0];
+          const dueDateObj = new Date(taskData.due_date);
+          const formattedDate = dueDateObj.toISOString().split('T')[0];
           setDueDate(formattedDate);
-          
           setDuration(taskData.duration.toString());
-          
-          // Note: In a real application, you'd fetch the assignees from the task
-          // and set them here. For now, we'll use a placeholder.
-          setAssignees([]);
-          
+          setAssignees([]); // Placeholder for actual assignees
           setError(null);
         } catch (err: any) {
           console.error('Error fetching task details:', err);
@@ -71,10 +61,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
       }
     };
 
-    // Fetch available TAs for assignment
-    // In a real app, this would be an API call to get all available TAs
     const fetchAvailableTAs = async () => {
-      // Placeholder - replace with actual API call
       setAvailableAssignees([
         { id: 1, fullName: 'John Doe' },
         { id: 2, fullName: 'Jane Smith' },
@@ -82,38 +69,34 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
       ]);
     };
 
-    fetchTaskDetails();
+    if (mode === 'edit') fetchTaskDetails(); // Only fetch task details if editing
+    else setLoading(false); // If creating, no initial loading needed for task data
+    
     fetchAvailableTAs();
   }, [mode, id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validation
     if (!title || !courseId || !dueDate || !duration) {
       setError('Please fill all required fields');
       return;
     }
-
     const taskData: TaskCreateData = {
       title,
       description,
-      task_type: taskType as any,
+      task_type: taskType as any, 
       course_id: courseId,
       due_date: dueDate,
       duration: parseInt(duration),
       assignees
     };
-
     try {
       if (mode === 'create') {
         await createTask(taskData);
       } else if (mode === 'edit' && id) {
         await updateTask(parseInt(id), taskData);
       }
-
-      // Navigate back to tasks list
-      navigate('/tasks');
+      navigate('/tasks'); 
     } catch (err: any) {
       console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, err);
       setError(err.message || `Failed to ${mode === 'create' ? 'create' : 'update'} task`);
@@ -127,25 +110,27 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
   const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const options = e.target.options;
     const selectedAssignees: number[] = [];
-    
     for (let i = 0; i < options.length; i++) {
       if (options[i].selected) {
         selectedAssignees.push(parseInt(options[i].value));
       }
     }
-    
     setAssignees(selectedAssignees);
   };
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">Loading task form...</div>;
   }
 
-  // Check if user is authorized to create/edit tasks
-  if (user && !['staff', 'department_chair', 'admin'].includes(user.role)) {
+  if (!user) {
+    return <div className="loading">Loading user data for permissions...</div>;
+  }
+
+  const allowedToUseFormRoles = ['ta', 'staff', 'department_chair', 'admin'];
+  if (!allowedToUseFormRoles.includes(user.role)) {
     return (
       <div className="error-message permission-error">
-        You do not have permission to {mode === 'create' ? 'create' : 'edit'} tasks.
+        You (role: {user.role}) do not have permission to {mode === 'create' ? 'create' : 'edit'} tasks using this form.
       </div>
     );
   }
