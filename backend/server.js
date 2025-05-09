@@ -5,16 +5,24 @@ const cors = require('cors');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
 const db = require('./config/db');
+const { initDatabase } = require('./config/dbInit');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Test DB Connection
+// Test DB Connection and Initialize Database
 db.getConnection()
-  .then(connection => {
+  .then(async connection => {
     console.log('Database connection established');
     connection.release();
+    
+    // Initialize database tables
+    try {
+      await initDatabase();
+    } catch (error) {
+      console.error('Failed to initialize database tables:', error);
+    }
   })
   .catch(err => {
     console.error('Database connection failed:', err);
