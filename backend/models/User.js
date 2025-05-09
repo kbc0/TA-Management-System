@@ -1,6 +1,7 @@
 // backend/models/User.js
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const { ROLES, getPermissionsForRole, isValidRole } = require('../config/roles');
 
 class User {
   static async findById(id) {
@@ -75,5 +76,42 @@ class User {
     return await bcrypt.compare(plainPassword, hashedPassword);
   }
 }
+
+// Get all available roles
+User.getRoles = () => {
+  return Object.values(ROLES);
+};
+
+// Get user with permissions
+User.findByIdWithPermissions = async (id) => {
+  try {
+    const user = await User.findById(id);
+    if (!user) return null;
+    
+    // Add permissions to user object
+    user.permissions = getPermissionsForRole(user.role);
+    return user;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Update user role
+User.updateRole = async (userId, newRole) => {
+  try {
+    // Validate role
+    if (!isValidRole(newRole)) {
+      throw new Error(`Invalid role: ${newRole}`);
+    }
+    
+    const [result] = await db.query(
+      'UPDATE users SET role = ? WHERE id = ?',
+      [newRole, userId]
+    );
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw error;
+  }
+};
 
 module.exports = User;

@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const db = require('./config/db');
 const loggingService = require('./services/LoggingService');
@@ -51,6 +52,7 @@ db.getConnection()
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 
 // Audit logging for errors
