@@ -49,3 +49,9 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp 
+
+frontend.txt
+backend.txt
+mysql_db_analysis.txt
+mysql_db_info.sh
+leave_swap_tables.sql

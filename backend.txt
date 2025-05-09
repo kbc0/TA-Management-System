@@ -9,18 +9,23 @@ backend
 │   └── db.js
 ├── controllers
 │   ├── authController.js
+│   ├── leaveController.js
+│   ├── swapController.js
 │   └── taskController.js
 ├── docs
-│   └── api-documentation.md
 ├── middleware
 │   ├── authMiddleware.js
 │   └── validationMiddleware.js
 ├── models
+│   ├── Leave.js
+│   ├── Swap.js
 │   ├── Task.js
 │   └── User.js
 ├── package.json
 ├── routes
 │   ├── authRoutes.js
+│   ├── leaveRoutes.js
+│   ├── swapRoutes.js
 │   └── taskRoutes.js
 └── server.js
 
@@ -441,6 +446,525 @@ exports.logout = (req, res) => {
 };
 ```
 
+`backend/controllers/leaveController.js`:
+
+```js
+// backend/controllers/leaveController.js
+const Leave = require('../models/Leave');
+
+/**
+ * Get all leave requests based on user role
+ * @route GET /api/leaves
+ */
+exports.getAllLeaves = async (req, res) => {
+  try {
+    const leaves = await Leave.findAll(req.user.id, req.user.role);
+    res.json(leaves);
+  } catch (error) {
+    console.error('Error fetching leave requests:', error);
+    res.status(500).json({ message: 'Server error while fetching leave requests', error: error.message });
+  }
+};
+
+/**
+ * Get a specific leave request by ID
+ * @route GET /api/leaves/:id
+ */
+exports.getLeaveById = async (req, res) => {
+  try {
+    const leave = await Leave.findById(req.params.id);
+    
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+    
+    // Check if user has permission to view this leave request
+    if (req.user.role !== 'admin' && 
+        req.user.role !== 'department_chair' && 
+        req.user.role !== 'staff' &&
+        req.user.id !== leave.user_id) {
+      return res.status(403).json({ message: 'You do not have permission to view this leave request' });
+    }
+    
+    res.json(leave);
+  } catch (error) {
+    console.error('Error fetching leave request:', error);
+    res.status(500).json({ message: 'Server error while fetching leave request', error: error.message });
+  }
+};
+
+/**
+ * Get all leave requests for the current user
+ * @route GET /api/leaves/my-leaves
+ */
+exports.getMyLeaves = async (req, res) => {
+  try {
+    const leaves = await Leave.findByUserId(req.user.id);
+    res.json(leaves);
+  } catch (error) {
+    console.error('Error fetching user leave requests:', error);
+    res.status(500).json({ message: 'Server error while fetching user leave requests', error: error.message });
+  }
+};
+
+/**
+ * Create a new leave request
+ * @route POST /api/leaves
+ */
+exports.createLeave = async (req, res) => {
+  try {
+    const { leave_type, start_date, end_date, reason, supporting_document_url } = req.body;
+    
+    // Validate required fields
+    if (!leave_type || !start_date || !end_date || !reason) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        required: ['leave_type', 'start_date', 'end_date', 'reason']
+      });
+    }
+    
+    // Validate leave type
+    const validTypes = ['conference', 'medical', 'family_emergency', 'personal', 'other'];
+    if (!validTypes.includes(leave_type)) {
+      return res.status(400).json({ 
+        message: 'Invalid leave type', 
+        validTypes 
+      });
+    }
+    
+    // Validate dates
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    const today = new Date();
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ message: 'Start date must be before end date' });
+    }
+    
+    // Only admins can create backdated leave requests
+    if (startDate < today && req.user.role !== 'admin') {
+      return res.status(400).json({ message: 'Cannot request leave for past dates' });
+    }
+    
+    // Check for conflicts with existing assignments
+    const conflicts = await Leave.checkConflicts(req.user.id, start_date, end_date);
+    
+    // Create leave request
+    const leaveResult = await Leave.create({
+      user_id: req.user.id,
+      leave_type,
+      start_date,
+      end_date,
+      reason,
+      supporting_document_url: supporting_document_url || null
+    });
+    
+    // Get the created leave with details
+    const createdLeave = await Leave.findById(leaveResult.id);
+    
+    // Return response with conflict warnings if any
+    res.status(201).json({
+      message: 'Leave request created successfully',
+      leave: createdLeave,
+      conflicts: conflicts.hasConflicts ? {
+        message: 'Warning: You have assignments during the requested leave period',
+        taskConflicts: conflicts.taskConflicts,
+        examConflicts: conflicts.examConflicts
+      } : null
+    });
+  } catch (error) {
+    console.error('Error creating leave request:', error);
+    res.status(500).json({ message: 'Server error while creating leave request', error: error.message });
+  }
+};
+
+/**
+ * Update the status of a leave request (approve/reject)
+ * @route PUT /api/leaves/:id/status
+ */
+exports.updateLeaveStatus = async (req, res) => {
+  try {
+    const { status, reviewer_notes } = req.body;
+    const leaveId = req.params.id;
+    
+    // Validate the status
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected"' });
+    }
+    
+    // Check if user has permission to approve/reject leaves
+    if (req.user.role !== 'admin' && req.user.role !== 'department_chair' && req.user.role !== 'staff') {
+      return res.status(403).json({ message: 'You do not have permission to approve or reject leave requests' });
+    }
+    
+    // Get the leave request
+    const leave = await Leave.findById(leaveId);
+    
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+    
+    // Only allow changes to pending requests
+    if (leave.status !== 'pending') {
+      return res.status(400).json({ 
+        message: 'Cannot update status of a leave request that has already been processed', 
+        currentStatus: leave.status
+      });
+    }
+    
+    // Update the leave request status
+    const updated = await Leave.update(leaveId, status, req.user.id, reviewer_notes);
+    
+    if (!updated) {
+      return res.status(400).json({ message: 'Failed to update leave request status' });
+    }
+    
+    // Get the updated leave with details
+    const updatedLeave = await Leave.findById(leaveId);
+    
+    res.json({
+      message: `Leave request ${status}`,
+      leave: updatedLeave
+    });
+  } catch (error) {
+    console.error('Error updating leave request status:', error);
+    res.status(500).json({ message: 'Server error while updating leave request status', error: error.message });
+  }
+};
+
+/**
+ * Delete a leave request
+ * @route DELETE /api/leaves/:id
+ */
+exports.deleteLeave = async (req, res) => {
+  try {
+    const leaveId = req.params.id;
+    
+    // First check if the leave exists
+    const leave = await Leave.findById(leaveId);
+    
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+    
+    // Check permissions - only the user who created it (if still pending) or an admin can delete
+    if (req.user.role !== 'admin' && req.user.id !== leave.user_id) {
+      return res.status(403).json({ message: 'You do not have permission to delete this leave request' });
+    }
+    
+    if (req.user.role !== 'admin' && leave.status !== 'pending') {
+      return res.status(400).json({ message: 'Cannot delete leave requests that have already been reviewed' });
+    }
+    
+    // Delete the leave request
+    const deleted = await Leave.delete(leaveId, req.user.id, req.user.role);
+    
+    if (!deleted) {
+      return res.status(400).json({ message: 'Failed to delete leave request' });
+    }
+    
+    res.json({ message: 'Leave request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting leave request:', error);
+    res.status(500).json({ message: 'Server error while deleting leave request', error: error.message });
+  }
+};
+
+/**
+ * Get leave statistics
+ * @route GET /api/leaves/statistics
+ */
+exports.getLeaveStatistics = async (req, res) => {
+  try {
+    // For normal users, get only their stats; for admins/department chairs/staff, get all stats
+    const userId = (req.user.role === 'admin' || req.user.role === 'department_chair' || req.user.role === 'staff') ? 
+      null : req.user.id;
+    
+    const statistics = await Leave.getLeaveStatistics(userId);
+    res.json(statistics);
+  } catch (error) {
+    console.error('Error fetching leave statistics:', error);
+    res.status(500).json({ message: 'Server error while fetching leave statistics', error: error.message });
+  }
+};
+```
+
+`backend/controllers/swapController.js`:
+
+```js
+// backend/controllers/swapController.js
+const Swap = require('../models/Swap');
+
+/**
+ * Get all swap requests based on user role
+ * @route GET /api/swaps
+ */
+exports.getAllSwaps = async (req, res) => {
+  try {
+    const swaps = await Swap.findAll(req.user.id, req.user.role);
+    res.json(swaps);
+  } catch (error) {
+    console.error('Error fetching swap requests:', error);
+    res.status(500).json({ message: 'Server error while fetching swap requests', error: error.message });
+  }
+};
+
+/**
+ * Get a specific swap request by ID
+ * @route GET /api/swaps/:id
+ */
+exports.getSwapById = async (req, res) => {
+  try {
+    const swap = await Swap.findById(req.params.id);
+    
+    if (!swap) {
+      return res.status(404).json({ message: 'Swap request not found' });
+    }
+    
+    // Check if user has permission to view this swap request
+    if (req.user.role !== 'admin' && 
+        req.user.role !== 'department_chair' && 
+        req.user.role !== 'staff' &&
+        req.user.id !== swap.requester_id && 
+        req.user.id !== swap.target_id) {
+      return res.status(403).json({ message: 'You do not have permission to view this swap request' });
+    }
+    
+    res.json(swap);
+  } catch (error) {
+    console.error('Error fetching swap request:', error);
+    res.status(500).json({ message: 'Server error while fetching swap request', error: error.message });
+  }
+};
+
+/**
+ * Get all swap requests involving the current user
+ * @route GET /api/swaps/my-swaps
+ */
+exports.getMySwaps = async (req, res) => {
+  try {
+    const swaps = await Swap.findByUserId(req.user.id);
+    res.json(swaps);
+  } catch (error) {
+    console.error('Error fetching user swap requests:', error);
+    res.status(500).json({ message: 'Server error while fetching user swap requests', error: error.message });
+  }
+};
+
+/**
+ * Create a new swap request
+ * @route POST /api/swaps
+ */
+exports.createSwap = async (req, res) => {
+  try {
+    const { 
+      target_id, 
+      assignment_type, 
+      original_assignment_id, 
+      proposed_assignment_id,
+      reason 
+    } = req.body;
+    
+    // Validate required fields
+    if (!target_id || !assignment_type || !original_assignment_id || !reason) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        required: ['target_id', 'assignment_type', 'original_assignment_id', 'reason']
+      });
+    }
+    
+    // Validate type
+    if (!['task', 'exam'].includes(assignment_type)) {
+      return res.status(400).json({ message: 'Invalid assignment type. Must be "task" or "exam"' });
+    }
+    
+    // Prevent self-swaps
+    if (req.user.id === parseInt(target_id)) {
+      return res.status(400).json({ message: 'Cannot create a swap request with yourself' });
+    }
+    
+    // Create swap request
+    try {
+      const swapResult = await Swap.create({
+        requester_id: req.user.id,
+        target_id,
+        assignment_type,
+        original_assignment_id,
+        proposed_assignment_id: proposed_assignment_id || null,
+        reason
+      });
+      
+      // Get the created swap with details
+      const createdSwap = await Swap.findById(swapResult.id);
+      
+      res.status(201).json({
+        message: 'Swap request created successfully',
+        swap: createdSwap
+      });
+    } catch (error) {
+      // Catch specific model errors and return appropriate response
+      if (error.message.includes('not assigned') || 
+          error.message.includes('not found')) {
+        return res.status(400).json({ message: error.message });
+      }
+      throw error; // Re-throw other errors to be caught by the outer catch block
+    }
+  } catch (error) {
+    console.error('Error creating swap request:', error);
+    res.status(500).json({ message: 'Server error while creating swap request', error: error.message });
+  }
+};
+
+/**
+ * Update the status of a swap request (approve/reject)
+ * @route PUT /api/swaps/:id/status
+ */
+exports.updateSwapStatus = async (req, res) => {
+  try {
+    const { status, reviewer_notes } = req.body;
+    const swapId = req.params.id;
+    
+    // Validate the status
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be "approved" or "rejected"' });
+    }
+    
+    // Get the swap request
+    const swap = await Swap.findById(swapId);
+    
+    if (!swap) {
+      return res.status(404).json({ message: 'Swap request not found' });
+    }
+    
+    // Only allow changes to pending requests
+    if (swap.status !== 'pending') {
+      return res.status(400).json({ 
+        message: 'Cannot update status of a swap request that has already been processed', 
+        currentStatus: swap.status
+      });
+    }
+    
+    // Check permissions
+    const isStaffOrAdmin = ['admin', 'department_chair', 'staff'].includes(req.user.role);
+    const isTargetUser = req.user.id === swap.target_id;
+    
+    // Target user can respond to the request, or staff/admins can override
+    if (!isStaffOrAdmin && !isTargetUser) {
+      return res.status(403).json({ message: 'You do not have permission to update this swap request' });
+    }
+    
+    try {
+      // Update the swap request status
+      const updateResult = await Swap.updateStatus(swapId, status, req.user.id, reviewer_notes);
+      
+      if (!updateResult.success) {
+        return res.status(400).json({ message: 'Failed to update swap request status' });
+      }
+      
+      // Get the updated swap with details
+      const updatedSwap = await Swap.findById(swapId);
+      
+      res.json({
+        message: `Swap request ${status}`,
+        swap: updatedSwap
+      });
+    } catch (error) {
+      // Catch specific model errors and return appropriate response
+      if (error.message.includes('not found') || 
+          error.message.includes('assignment not found')) {
+        return res.status(400).json({ message: error.message });
+      }
+      throw error; // Re-throw other errors to be caught by the outer catch block
+    }
+  } catch (error) {
+    console.error('Error updating swap request status:', error);
+    res.status(500).json({ message: 'Server error while updating swap request status', error: error.message });
+  }
+};
+
+/**
+ * Delete a swap request
+ * @route DELETE /api/swaps/:id
+ */
+exports.deleteSwap = async (req, res) => {
+  try {
+    const swapId = req.params.id;
+    
+    // First check if the swap exists
+    const swap = await Swap.findById(swapId);
+    
+    if (!swap) {
+      return res.status(404).json({ message: 'Swap request not found' });
+    }
+    
+    // Check permissions - only the user who created it (if still pending) or an admin can delete
+    if (req.user.role !== 'admin' && req.user.id !== swap.requester_id) {
+      return res.status(403).json({ message: 'You do not have permission to delete this swap request' });
+    }
+    
+    if (req.user.role !== 'admin' && swap.status !== 'pending') {
+      return res.status(400).json({ message: 'Cannot delete swap requests that have already been reviewed' });
+    }
+    
+    // Delete the swap request
+    const deleted = await Swap.delete(swapId, req.user.id, req.user.role);
+    
+    if (!deleted) {
+      return res.status(400).json({ message: 'Failed to delete swap request' });
+    }
+    
+    res.json({ message: 'Swap request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting swap request:', error);
+    res.status(500).json({ message: 'Server error while deleting swap request', error: error.message });
+  }
+};
+
+/**
+ * Get eligible target users for a swap
+ * @route GET /api/swaps/eligible-targets/:assignmentId/:type
+ */
+exports.getEligibleTargets = async (req, res) => {
+  try {
+    const { assignmentId, type } = req.params;
+    
+    // Validate the type
+    if (!['task', 'exam'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid type. Must be "task" or "exam"' });
+    }
+    
+    const eligibleTargets = await Swap.getEligibleTargets(req.user.id, assignmentId, type);
+    
+    res.json(eligibleTargets);
+  } catch (error) {
+    console.error('Error fetching eligible targets:', error);
+    res.status(500).json({ message: 'Server error while fetching eligible targets', error: error.message });
+  }
+};
+
+/**
+ * Get swap statistics
+ * @route GET /api/swaps/statistics
+ */
+exports.getSwapStatistics = async (req, res) => {
+  try {
+    // For normal users, get only their stats; for admins/department chairs/staff, get all stats
+    const userId = (req.user.role === 'admin' || req.user.role === 'department_chair' || req.user.role === 'staff') ? 
+      null : req.user.id;
+    
+    const statistics = await Swap.getSwapStatistics(userId);
+    res.json(statistics);
+  } catch (error) {
+    console.error('Error fetching swap statistics:', error);
+    res.status(500).json({ message: 'Server error while fetching swap statistics', error: error.message });
+  }
+};
+```
+
 `backend/controllers/taskController.js`:
 
 ```js
@@ -544,7 +1068,7 @@ exports.updateTask = async (req, res) => {
 exports.completeTask = async (req, res) => {
   try {
     const taskId = req.params.id;
-    const result = await Task.complete(taskId, req.user.id);
+    const result = await Task.complete(taskId, req.user.id, req.user.role);
     
     if (!result.success) {
       return res.status(400).json({ message: result.message });
@@ -586,408 +1110,6 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-```
-
-`backend/docs/api-documentation.md`:
-
-```md
-# TA Management System API Documentation
-
-## Authentication Endpoints
-
-### Sign Up
-Register a new user in the system.
-
-**URL**: `/api/auth/signup`  
-**Method**: `POST`  
-**Auth Required**: No
-
-**Request Body**:
-```json
-{
-  "bilkentId": "12345678",
-  "email": "student@bilkent.edu.tr",
-  "fullName": "John Doe",
-  "password": "securepassword",
-  "role": "ta"  // Optional, defaults to "ta"
-}
-```
-
-**Notes**:
-- `email` must end with `@bilkent.edu.tr`
-- `password` must be at least 6 characters
-- `role` must be one of: ["ta", "staff", "department_chair", "dean", "admin"]
-
-**Success Response**:
-- **Code**: 201 Created
-- **Content**:
-```json
-{
-  "message": "User registered successfully",
-  "token": "jwt-token",
-  "user": {
-    "id": 1,
-    "bilkentId": "12345678",
-    "email": "student@bilkent.edu.tr",
-    "fullName": "John Doe",
-    "role": "ta"
-  }
-}
-```
-
-**Error Responses**:
-- **Code**: 400 Bad Request
-- **Condition**: Validation failed
-- **Content**:
-```json
-{
-  "message": "Validation failed",
-  "errors": {
-    "email": "Must use a Bilkent email address (@bilkent.edu.tr)",
-    "password": "Password must be at least 6 characters long"
-  }
-}
-```
-
-- **Code**: 409 Conflict
-- **Condition**: User already exists
-- **Content**:
-```json
-{
-  "message": "User with this Bilkent ID already exists"
-}
-```
-
-### Login
-Authenticate a user and get a token.
-
-**URL**: `/api/auth/login`  
-**Method**: `POST`  
-**Auth Required**: No
-
-**Request Body**:
-```json
-{
-  "bilkentId": "12345678",
-  "password": "securepassword"
-}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "token": "jwt-token",
-  "user": {
-    "id": 1,
-    "bilkentId": "12345678",
-    "email": "student@bilkent.edu.tr",
-    "fullName": "John Doe",
-    "role": "ta"
-  }
-}
-```
-
-**Error Responses**:
-- **Code**: 400 Bad Request
-- **Condition**: Validation failed
-- **Content**:
-```json
-{
-  "message": "Validation failed",
-  "errors": {
-    "bilkentId": "Bilkent ID is required"
-  }
-}
-```
-
-- **Code**: 401 Unauthorized
-- **Condition**: Invalid credentials
-- **Content**:
-```json
-{
-  "message": "Invalid credentials"
-}
-```
-
-### Recover Password
-Request a password reset link.
-
-**URL**: `/api/auth/recover-password`  
-**Method**: `POST`  
-**Auth Required**: No
-
-**Request Body**:
-```json
-{
-  "bilkentId": "12345678"
-}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "message": "If your ID exists, a password reset link has been sent to your email"
-}
-```
-
-### Reset Password
-Reset a user's password using a token.
-
-**URL**: `/api/auth/reset-password`  
-**Method**: `POST`  
-**Auth Required**: No
-
-**Request Body**:
-```json
-{
-  "token": "reset-token",
-  "bilkentId": "12345678",
-  "newPassword": "newSecurePassword"
-}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "message": "Password has been reset successfully"
-}
-```
-
-**Error Responses**:
-- **Code**: 400 Bad Request
-- **Condition**: Invalid token
-- **Content**:
-```json
-{
-  "message": "Invalid or expired token"
-}
-```
-
-### Logout
-Logout a user (client-side implementation).
-
-**URL**: `/api/auth/logout`  
-**Method**: `POST`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "message": "Logged out successfully"
-}
-```
-
-## Task Management Endpoints
-
-### Get All Tasks
-Get all tasks based on user role.
-
-**URL**: `/api/tasks`  
-**Method**: `GET`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**: Array of task objects
-
-### Get Task by ID
-Get details of a specific task.
-
-**URL**: `/api/tasks/:id`  
-**Method**: `GET`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**: Task object
-
-**Error Response**:
-- **Code**: 404 Not Found
-- **Content**:
-```json
-{
-  "message": "Task not found"
-}
-```
-
-### Get Upcoming Tasks
-Get upcoming tasks for the current user.
-
-**URL**: `/api/tasks/upcoming`  
-**Method**: `GET`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Query Parameters**:
-- `limit` (optional): Number of tasks to return (default: 5)
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**: Array of task objects
-
-### Create Task
-Create a new task.
-
-**URL**: `/api/tasks`  
-**Method**: `POST`  
-**Auth Required**: Yes (staff, department_chair, admin roles only)
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Request Body**:
-```json
-{
-  "title": "Lab Grading",
-  "description": "Grade lab submissions for Week 5",
-  "task_type": "grading",
-  "course_id": "CS101",
-  "due_date": "2025-05-15",
-  "duration": 120,
-  "assignees": [1, 2, 3]  // Array of user IDs
-}
-```
-
-**Success Response**:
-- **Code**: 201 Created
-- **Content**: Created task object
-
-**Error Response**:
-- **Code**: 403 Forbidden
-- **Content**:
-```json
-{
-  "message": "You do not have permission to create tasks"
-}
-```
-
-### Update Task
-Update an existing task.
-
-**URL**: `/api/tasks/:id`  
-**Method**: `PUT`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Request Body**:
-```json
-{
-  "title": "Updated Lab Grading",
-  "description": "Updated description",
-  "task_type": "grading",
-  "course_id": "CS101",
-  "due_date": "2025-05-16",
-  "duration": 150,
-  "status": "active",
-  "assignees": [1, 4]
-}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**: Updated task object
-
-**Error Response**:
-- **Code**: 403 Forbidden
-- **Content**:
-```json
-{
-  "message": "You do not have permission to update this task"
-}
-```
-
-### Complete Task
-Mark a task as completed.
-
-**URL**: `/api/tasks/:id/complete`  
-**Method**: `PUT`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "message": "Task marked as completed"
-}
-```
-
-**Error Response**:
-- **Code**: 400 Bad Request
-- **Content**:
-```json
-{
-  "message": "You are not assigned to this task"
-}
-```
-
-### Delete Task
-Delete a task.
-
-**URL**: `/api/tasks/:id`  
-**Method**: `DELETE`  
-**Auth Required**: Yes
-
-**Headers**:
-```
-Authorization: Bearer {jwt-token}
-```
-
-**Success Response**:
-- **Code**: 200 OK
-- **Content**:
-```json
-{
-  "message": "Task deleted successfully"
-}
-```
-
-**Error Response**:
-- **Code**: 403 Forbidden
-- **Content**:
-```json
-{
-  "message": "You do not have permission to delete this task"
-}
-```
 ```
 
 `backend/middleware/authMiddleware.js`:
@@ -1178,6 +1300,934 @@ exports.normalizeParams = (req, res, next) => {
 };
 ```
 
+`backend/models/Leave.js`:
+
+```js
+// backend/models/Leave.js
+const db = require('../config/db');
+
+class Leave {
+  static async findAll(userId = null, role = null) {
+    try {
+      // For TAs, return only their own leave requests
+      if (userId && role === 'ta') {
+        const [rows] = await db.query(
+          `SELECT l.*, u.full_name as requester_name, u.bilkent_id as requester_bilkent_id
+           FROM leave_requests l
+           JOIN users u ON l.user_id = u.id
+           WHERE l.user_id = ?
+           ORDER BY l.created_at DESC`,
+          [userId]
+        );
+        return rows;
+      }
+
+      // For department chairs, admins, and staff - return relevant leave requests
+      if (role === 'department_chair' || role === 'admin' || role === 'staff') {
+        // Department chairs and admins can see all leave requests
+        const [rows] = await db.query(
+          `SELECT l.*, u.full_name as requester_name, u.bilkent_id as requester_bilkent_id,
+           r.full_name as reviewer_name
+           FROM leave_requests l
+           JOIN users u ON l.user_id = u.id
+           LEFT JOIN users r ON l.reviewer_id = r.id
+           ORDER BY l.created_at DESC`
+        );
+        return rows;
+      }
+
+      // Default case - shouldn't normally be reached with proper auth
+      const [rows] = await db.query(
+        `SELECT l.*, u.full_name as requester_name
+         FROM leave_requests l
+         JOIN users u ON l.user_id = u.id
+         ORDER BY l.created_at DESC`
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findById(leaveId) {
+    try {
+      const [rows] = await db.query(
+        `SELECT l.*, u.full_name as requester_name, u.bilkent_id as requester_bilkent_id, 
+         u.email as requester_email, u.status as user_status,
+         r.full_name as reviewer_name, r.bilkent_id as reviewer_bilkent_id
+         FROM leave_requests l
+         JOIN users u ON l.user_id = u.id
+         LEFT JOIN users r ON l.reviewer_id = r.id
+         WHERE l.id = ?`,
+        [leaveId]
+      );
+      return rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findByUserId(userId) {
+    try {
+      const [rows] = await db.query(
+        `SELECT l.*, r.full_name as reviewer_name
+         FROM leave_requests l
+         LEFT JOIN users r ON l.reviewer_id = r.id
+         WHERE l.user_id = ? 
+         ORDER BY l.created_at DESC`,
+        [userId]
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async create(leaveData) {
+    try {
+      const { user_id, leave_type, start_date, end_date, reason, supporting_document_url } = leaveData;
+      
+      // Calculate duration in days
+      const startDate = new Date(start_date);
+      const endDate = new Date(end_date);
+      const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Start a transaction
+      await db.query('START TRANSACTION');
+      
+      // Check for task conflicts 
+      const [taskConflicts] = await db.query(
+        `SELECT t.id, t.title, t.task_type, t.due_date, t.course_id 
+         FROM tasks t 
+         JOIN task_assignments ta ON t.id = ta.task_id 
+         WHERE ta.user_id = ? 
+         AND t.status = 'active' 
+         AND t.due_date BETWEEN ? AND ?`,
+        [user_id, start_date, end_date]
+      );
+      
+      // Check for exam conflicts
+      const [examConflicts] = await db.query(
+        `SELECT e.id, e.exam_name as title, e.course_id, e.exam_date as due_date
+         FROM exams e
+         JOIN tasks t ON t.course_id = e.course_id AND t.task_type = 'proctoring'
+         JOIN task_assignments ta ON t.id = ta.task_id 
+         WHERE ta.user_id = ?
+         AND e.exam_date BETWEEN ? AND ?`,
+        [user_id, start_date, end_date]
+      );
+
+      // Insert the leave request
+      const [result] = await db.query(
+        `INSERT INTO leave_requests 
+         (user_id, leave_type, start_date, end_date, duration, reason, supporting_document_url, status) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [user_id, leave_type, start_date, end_date, duration, reason, supporting_document_url]
+      );
+      
+      // Add a system log entry for the leave request
+      await db.query(
+        `INSERT INTO system_logs (user_id, action, details, ip_address) 
+         VALUES (?, 'leave_requested', ?, NULL)`,
+        [
+          user_id, 
+          JSON.stringify({
+            leave_id: result.insertId,
+            leave_type,
+            start_date,
+            end_date,
+            has_conflicts: taskConflicts.length > 0 || examConflicts.length > 0
+          })
+        ]
+      );
+
+      // Commit the transaction
+      await db.query('COMMIT');
+      
+      // Return conflicts if any
+      return {
+        id: result.insertId,
+        conflicts: {
+          taskConflicts: taskConflicts.length > 0 ? taskConflicts : null,
+          examConflicts: examConflicts.length > 0 ? examConflicts : null,
+          hasConflicts: taskConflicts.length > 0 || examConflicts.length > 0
+        }
+      };
+    } catch (error) {
+      // Rollback the transaction on error
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  static async update(leaveId, status, reviewer_id, reviewer_notes = null) {
+    try {
+      // Start a transaction
+      await db.query('START TRANSACTION');
+      
+      // Get the leave request details
+      const [leaveDetails] = await db.query(
+        'SELECT * FROM leave_requests WHERE id = ?',
+        [leaveId]
+      );
+      
+      if (leaveDetails.length === 0) {
+        await db.query('ROLLBACK');
+        throw new Error('Leave request not found');
+      }
+      
+      const leave = leaveDetails[0];
+      
+      // Update the leave request status
+      const [result] = await db.query(
+        `UPDATE leave_requests 
+         SET status = ?, reviewer_id = ?, reviewer_notes = ?, reviewed_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [status, reviewer_id, reviewer_notes, leaveId]
+      );
+      
+      // If approved, add a system log entry 
+      if (status === 'approved') {
+        // Add a system log entry
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'leave_approved', ?, NULL)`,
+          [
+            reviewer_id, 
+            JSON.stringify({
+              leave_id: leaveId,
+              user_id: leave.user_id,
+              start_date: leave.start_date,
+              end_date: leave.end_date
+            })
+          ]
+        );
+        
+        // We don't automatically change user status to 'on_leave' here
+        // That should be handled by a separate scheduled job or admin action
+      } else if (status === 'rejected') {
+        // Add a system log entry for rejection
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'leave_rejected', ?, NULL)`,
+          [
+            reviewer_id, 
+            JSON.stringify({
+              leave_id: leaveId,
+              user_id: leave.user_id,
+              reason: reviewer_notes
+            })
+          ]
+        );
+      }
+      
+      // Commit the transaction
+      await db.query('COMMIT');
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      // Rollback the transaction on error
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  static async delete(leaveId, userId, role) {
+    try {
+      // Start a transaction
+      await db.query('START TRANSACTION');
+      
+      // Only allow deletion of pending leaves by the requester or an admin
+      let query = 'DELETE FROM leave_requests WHERE id = ?';
+      let params = [leaveId];
+
+      if (role !== 'admin') {
+        query += ' AND user_id = ? AND status = "pending"';
+        params.push(userId);
+      }
+
+      const [result] = await db.query(query, params);
+      
+      // Log the deletion if successful
+      if (result.affectedRows > 0) {
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'leave_deleted', ?, NULL)`,
+          [
+            userId,
+            JSON.stringify({
+              leave_id: leaveId
+            })
+          ]
+        );
+      }
+      
+      // Commit the transaction
+      await db.query('COMMIT');
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      // Rollback the transaction on error
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  static async getLeaveStatistics(userId = null) {
+    try {
+      let query = `
+        SELECT 
+          COUNT(*) as total_requests,
+          SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'approved' THEN duration ELSE 0 END) as total_days_taken
+        FROM leave_requests
+      `;
+      
+      let params = [];
+      
+      if (userId) {
+        query += ' WHERE user_id = ?';
+        params.push(userId);
+      }
+      
+      const [rows] = await db.query(query, params);
+      return rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async checkConflicts(userId, startDate, endDate) {
+    try {
+      // Check for conflicts with tasks
+      const [taskConflicts] = await db.query(
+        `SELECT t.id, t.title, t.task_type, t.due_date, t.course_id 
+         FROM tasks t 
+         JOIN task_assignments ta ON t.id = ta.task_id 
+         WHERE ta.user_id = ? 
+         AND t.status = 'active' 
+         AND t.due_date BETWEEN ? AND ?`,
+        [userId, startDate, endDate]
+      );
+      
+      // Check for conflicts with exams 
+      const [examConflicts] = await db.query(
+        `SELECT e.id, e.exam_name as title, e.course_id, e.exam_date as due_date
+         FROM exams e
+         JOIN tasks t ON t.course_id = e.course_id AND t.task_type = 'proctoring'
+         JOIN task_assignments ta ON t.id = ta.task_id 
+         WHERE ta.user_id = ?
+         AND e.exam_date BETWEEN ? AND ?`,
+        [userId, startDate, endDate]
+      );
+      
+      return {
+        hasConflicts: taskConflicts.length > 0 || examConflicts.length > 0,
+        taskConflicts,
+        examConflicts
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+module.exports = Leave;
+```
+
+`backend/models/Swap.js`:
+
+```js
+// backend/models/Swap.js
+const db = require('../config/db');
+
+class Swap {
+  static async findAll(userId = null, role = null) {
+    try {
+      // For TAs, return swaps they're involved in (either as requester or target)
+      if (userId && role === 'ta') {
+        const [rows] = await db.query(
+          `SELECT s.*, 
+            r.full_name as requester_name, r.bilkent_id as requester_bilkent_id,
+            t.full_name as target_name, t.bilkent_id as target_bilkent_id,
+            CASE 
+              WHEN s.assignment_type = 'task' THEN task.title
+              WHEN s.assignment_type = 'exam' THEN exam.exam_name
+            END as assignment_title,
+            CASE 
+              WHEN s.assignment_type = 'task' THEN task.task_type
+              WHEN s.assignment_type = 'exam' THEN 'exam'
+            END as assignment_subtype
+          FROM swap_requests s
+          JOIN users r ON s.requester_id = r.id
+          JOIN users t ON s.target_id = t.id
+          LEFT JOIN tasks task ON s.original_assignment_id = task.id AND s.assignment_type = 'task'
+          LEFT JOIN exams exam ON s.original_assignment_id = exam.id AND s.assignment_type = 'exam'
+          WHERE s.requester_id = ? OR s.target_id = ?
+          ORDER BY s.created_at DESC`,
+          [userId, userId]
+        );
+        return rows;
+      }
+      
+      // For staff, department chair, and admin, return all swap requests
+      if (role === 'staff' || role === 'department_chair' || role === 'admin') {
+        const [rows] = await db.query(
+          `SELECT s.*, 
+            r.full_name as requester_name, r.bilkent_id as requester_bilkent_id,
+            t.full_name as target_name, t.bilkent_id as target_bilkent_id,
+            CASE 
+              WHEN s.assignment_type = 'task' THEN task.title
+              WHEN s.assignment_type = 'exam' THEN exam.exam_name
+            END as assignment_title,
+            CASE 
+              WHEN s.assignment_type = 'task' THEN task.task_type
+              WHEN s.assignment_type = 'exam' THEN 'exam'
+            END as assignment_subtype
+          FROM swap_requests s
+          JOIN users r ON s.requester_id = r.id
+          JOIN users t ON s.target_id = t.id
+          LEFT JOIN tasks task ON s.original_assignment_id = task.id AND s.assignment_type = 'task'
+          LEFT JOIN exams exam ON s.original_assignment_id = exam.id AND s.assignment_type = 'exam'
+          ORDER BY s.created_at DESC`
+        );
+        return rows;
+      }
+      
+      // Default fallback
+      const [rows] = await db.query(
+        `SELECT s.*, 
+          r.full_name as requester_name, 
+          t.full_name as target_name
+        FROM swap_requests s
+        JOIN users r ON s.requester_id = r.id
+        JOIN users t ON s.target_id = t.id
+        ORDER BY s.created_at DESC`
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findById(swapId) {
+    try {
+      const [rows] = await db.query(
+        `SELECT s.*, 
+          r.full_name as requester_name, r.bilkent_id as requester_bilkent_id, r.email as requester_email,
+          t.full_name as target_name, t.bilkent_id as target_bilkent_id, t.email as target_email,
+          CASE 
+            WHEN s.assignment_type = 'task' THEN task.title
+            WHEN s.assignment_type = 'exam' THEN exam.exam_name
+          END as assignment_title,
+          CASE
+            WHEN s.assignment_type = 'task' THEN task.task_type
+            WHEN s.assignment_type = 'exam' THEN 'exam'
+          END as assignment_subtype,
+          CASE
+            WHEN s.assignment_type = 'task' THEN task.course_id
+            WHEN s.assignment_type = 'exam' THEN exam.course_id
+          END as course_id,
+          rev.full_name as reviewer_name
+        FROM swap_requests s
+        JOIN users r ON s.requester_id = r.id
+        JOIN users t ON s.target_id = t.id
+        LEFT JOIN tasks task ON s.original_assignment_id = task.id AND s.assignment_type = 'task'
+        LEFT JOIN exams exam ON s.original_assignment_id = exam.id AND s.assignment_type = 'exam'
+        LEFT JOIN users rev ON s.reviewer_id = rev.id
+        WHERE s.id = ?`,
+        [swapId]
+      );
+      return rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findByUserId(userId) {
+    try {
+      const [rows] = await db.query(
+        `SELECT s.*, 
+          r.full_name as requester_name,
+          t.full_name as target_name,
+          CASE 
+            WHEN s.assignment_type = 'task' THEN task.title
+            WHEN s.assignment_type = 'exam' THEN exam.exam_name
+          END as assignment_title,
+          CASE 
+            WHEN s.assignment_type = 'task' THEN task.task_type
+            WHEN s.assignment_type = 'exam' THEN 'exam'
+          END as assignment_subtype
+        FROM swap_requests s
+        JOIN users r ON s.requester_id = r.id
+        JOIN users t ON s.target_id = t.id
+        LEFT JOIN tasks task ON s.original_assignment_id = task.id AND s.assignment_type = 'task'
+        LEFT JOIN exams exam ON s.original_assignment_id = exam.id AND s.assignment_type = 'exam'
+        WHERE s.requester_id = ? OR s.target_id = ?
+        ORDER BY s.created_at DESC`,
+        [userId, userId]
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async create(swapData) {
+    try {
+      const { 
+        requester_id, 
+        target_id, 
+        assignment_type, 
+        original_assignment_id, 
+        proposed_assignment_id,
+        reason 
+      } = swapData;
+      
+      // Start a transaction
+      await db.query('START TRANSACTION');
+      
+      // Check if the requester is eligible for the swap
+      if (assignment_type === 'task') {
+        // Check if the requester is assigned to the original task
+        const [requesterAssignment] = await db.query(
+          'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
+          [original_assignment_id, requester_id]
+        );
+        
+        if (requesterAssignment.length === 0) {
+          await db.query('ROLLBACK');
+          throw new Error('Requester is not assigned to the original task');
+        }
+        
+        // If proposed assignment is specified, check if target is assigned to it
+        if (proposed_assignment_id) {
+          const [targetAssignment] = await db.query(
+            'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
+            [proposed_assignment_id, target_id]
+          );
+          
+          if (targetAssignment.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Target is not assigned to the proposed task');
+          }
+        }
+      } else if (assignment_type === 'exam') {
+        // For exams, find the related proctoring task
+        const [examInfo] = await db.query('SELECT * FROM exams WHERE id = ?', [original_assignment_id]);
+        
+        if (examInfo.length === 0) {
+          await db.query('ROLLBACK');
+          throw new Error('Exam not found');
+        }
+        
+        const exam = examInfo[0];
+        
+        // Find proctoring task related to this exam for the requester
+        const [requesterTask] = await db.query(
+          `SELECT t.id, ta.id as assignment_id 
+           FROM tasks t 
+           JOIN task_assignments ta ON t.id = ta.task_id 
+           WHERE t.task_type = 'proctoring' 
+           AND ta.user_id = ? 
+           AND t.course_id = ?
+           AND t.due_date = ?`,
+          [requester_id, exam.course_id, exam.exam_date]
+        );
+        
+        if (requesterTask.length === 0) {
+          await db.query('ROLLBACK');
+          throw new Error('Requester is not assigned to proctor this exam');
+        }
+        
+        // If proposed assignment is specified, also check target's eligibility
+        if (proposed_assignment_id) {
+          const [proposedExamInfo] = await db.query('SELECT * FROM exams WHERE id = ?', [proposed_assignment_id]);
+          
+          if (proposedExamInfo.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Proposed exam not found');
+          }
+          
+          const proposedExam = proposedExamInfo[0];
+          
+          // Find proctoring task related to this exam for the target
+          const [targetTask] = await db.query(
+            `SELECT t.id, ta.id as assignment_id 
+             FROM tasks t 
+             JOIN task_assignments ta ON t.id = ta.task_id 
+             WHERE t.task_type = 'proctoring' 
+             AND ta.user_id = ? 
+             AND t.course_id = ?
+             AND t.due_date = ?`,
+            [target_id, proposedExam.course_id, proposedExam.exam_date]
+          );
+          
+          if (targetTask.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Target is not assigned to proctor the proposed exam');
+          }
+        }
+      }
+      
+      // Insert the swap request
+      const [result] = await db.query(
+        `INSERT INTO swap_requests 
+         (requester_id, target_id, assignment_type, original_assignment_id, proposed_assignment_id, reason, status) 
+         VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+        [requester_id, target_id, assignment_type, original_assignment_id, proposed_assignment_id, reason]
+      );
+      
+      // Add a system log entry
+      await db.query(
+        `INSERT INTO system_logs (user_id, action, details, ip_address) 
+         VALUES (?, 'swap_requested', ?, NULL)`,
+        [
+          requester_id, 
+          JSON.stringify({
+            swap_id: result.insertId,
+            target_id,
+            assignment_type,
+            original_assignment_id
+          })
+        ]
+      );
+      
+      // Commit the transaction
+      await db.query('COMMIT');
+      
+      return {
+        id: result.insertId,
+        status: 'pending'
+      };
+    } catch (error) {
+      // Rollback the transaction on error
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  static async updateStatus(swapId, status, reviewerId, reviewerNotes = null) {
+    try {
+      // Start a transaction
+      await db.query('START TRANSACTION');
+      
+      // Get swap details
+      const [swapDetails] = await db.query(
+        'SELECT * FROM swap_requests WHERE id = ?',
+        [swapId]
+      );
+      
+      if (swapDetails.length === 0) {
+        await db.query('ROLLBACK');
+        throw new Error('Swap request not found');
+      }
+      
+      const swap = swapDetails[0];
+      
+      // Update the swap request status
+      const [updateResult] = await db.query(
+        `UPDATE swap_requests 
+         SET status = ?, reviewer_id = ?, reviewer_notes = ?, reviewed_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [status, reviewerId, reviewerNotes, swapId]
+      );
+      
+      // If approved, perform the swap
+      if (status === 'approved') {
+        if (swap.assignment_type === 'task') {
+          // Get the task assignments that need to be swapped
+          const [requesterAssignment] = await db.query(
+            'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
+            [swap.original_assignment_id, swap.requester_id]
+          );
+          
+          if (requesterAssignment.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Requester task assignment not found');
+          }
+          
+          if (swap.proposed_assignment_id) {
+            // Two-way swap - get target's assignment
+            const [targetAssignment] = await db.query(
+              'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
+              [swap.proposed_assignment_id, swap.target_id]
+            );
+            
+            if (targetAssignment.length === 0) {
+              await db.query('ROLLBACK');
+              throw new Error('Target task assignment not found');
+            }
+            
+            // Update both assignments
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.target_id, requesterAssignment[0].id]
+            );
+            
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.requester_id, targetAssignment[0].id]
+            );
+          } else {
+            // One-way swap - target takes over requester's task
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.target_id, requesterAssignment[0].id]
+            );
+          }
+        } else if (swap.assignment_type === 'exam') {
+          // For exam swaps, we need to find the associated proctoring tasks
+          
+          // Get exam details
+          const [examInfo] = await db.query('SELECT * FROM exams WHERE id = ?', [swap.original_assignment_id]);
+          if (examInfo.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Exam not found');
+          }
+          const exam = examInfo[0];
+          
+          // Find the proctoring task for the requester
+          const [requesterTask] = await db.query(
+            `SELECT t.id, ta.id as assignment_id 
+             FROM tasks t 
+             JOIN task_assignments ta ON t.id = ta.task_id 
+             WHERE t.task_type = 'proctoring' 
+             AND ta.user_id = ? 
+             AND t.course_id = ?
+             AND t.due_date = ?`,
+            [swap.requester_id, exam.course_id, exam.exam_date]
+          );
+          
+          if (requesterTask.length === 0) {
+            await db.query('ROLLBACK');
+            throw new Error('Requester proctoring task not found');
+          }
+          
+          if (swap.proposed_assignment_id) {
+            // Two-way swap
+            const [proposedExamInfo] = await db.query('SELECT * FROM exams WHERE id = ?', [swap.proposed_assignment_id]);
+            if (proposedExamInfo.length === 0) {
+              await db.query('ROLLBACK');
+              throw new Error('Proposed exam not found');
+            }
+            const proposedExam = proposedExamInfo[0];
+            
+            // Find proctoring task for the target
+            const [targetTask] = await db.query(
+              `SELECT t.id, ta.id as assignment_id 
+               FROM tasks t 
+               JOIN task_assignments ta ON t.id = ta.task_id 
+               WHERE t.task_type = 'proctoring' 
+               AND ta.user_id = ? 
+               AND t.course_id = ?
+               AND t.due_date = ?`,
+              [swap.target_id, proposedExam.course_id, proposedExam.exam_date]
+            );
+            
+            if (targetTask.length === 0) {
+              await db.query('ROLLBACK');
+              throw new Error('Target proctoring task not found');
+            }
+            
+            // Update both assignments
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.target_id, requesterTask[0].assignment_id]
+            );
+            
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.requester_id, targetTask[0].assignment_id]
+            );
+          } else {
+            // One-way swap
+            await db.query(
+              'UPDATE task_assignments SET user_id = ? WHERE id = ?',
+              [swap.target_id, requesterTask[0].assignment_id]
+            );
+          }
+        }
+        
+        // Add system log for the approved swap
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'swap_approved', ?, NULL)`,
+          [
+            reviewerId, 
+            JSON.stringify({
+              swap_id: swapId,
+              requester_id: swap.requester_id,
+              target_id: swap.target_id
+            })
+          ]
+        );
+      } else if (status === 'rejected') {
+        // Add system log for the rejected swap
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'swap_rejected', ?, NULL)`,
+          [
+            reviewerId, 
+            JSON.stringify({
+              swap_id: swapId,
+              requester_id: swap.requester_id,
+              target_id: swap.target_id,
+              reason: reviewerNotes
+            })
+          ]
+        );
+      }
+      
+      // Commit the transaction
+      await db.query('COMMIT');
+      
+      return {
+        success: updateResult.affectedRows > 0,
+        status
+      };
+    } catch (error) {
+      // Rollback the transaction on error
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  }
+
+  static async delete(swapId, userId, role) {
+    try {
+      // Only allow deletion of pending swaps by the requester or an admin
+      let query = 'DELETE FROM swap_requests WHERE id = ?';
+      let params = [swapId];
+
+      if (role !== 'admin') {
+        query += ' AND requester_id = ? AND status = "pending"';
+        params.push(userId);
+      }
+
+      const [result] = await db.query(query, params);
+      
+      if (result.affectedRows > 0) {
+        // Log the deletion
+        await db.query(
+          `INSERT INTO system_logs (user_id, action, details, ip_address) 
+           VALUES (?, 'swap_deleted', ?, NULL)`,
+          [userId, JSON.stringify({ swap_id: swapId })]
+        );
+      }
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getEligibleTargets(requesterId, assignmentId, type) {
+    try {
+      let eligibleUsers = [];
+      
+      if (type === 'task') {
+        // Get task details
+        const [taskDetails] = await db.query(
+          'SELECT * FROM tasks WHERE id = ?', 
+          [assignmentId]
+        );
+        
+        if (taskDetails.length === 0) {
+          throw new Error('Task not found');
+        }
+        
+        const task = taskDetails[0];
+        
+        // Find TAs not on leave who have appropriate skills
+        const [users] = await db.query(
+          `SELECT u.id, u.full_name, u.bilkent_id, u.email
+           FROM users u
+           WHERE u.role = 'ta'
+           AND u.status = 'active'
+           AND u.id != ?
+           AND NOT EXISTS (
+             SELECT 1 FROM leave_requests lr
+             WHERE lr.user_id = u.id
+             AND lr.status = 'approved'
+             AND ? BETWEEN lr.start_date AND lr.end_date
+           )
+           ORDER BY u.full_name`,
+          [requesterId, task.due_date]
+        );
+        
+        eligibleUsers = users;
+      } else if (type === 'exam') {
+        // Get exam details
+        const [examDetails] = await db.query(
+          'SELECT * FROM exams WHERE id = ?', 
+          [assignmentId]
+        );
+        
+        if (examDetails.length === 0) {
+          throw new Error('Exam not found');
+        }
+        
+        const exam = examDetails[0];
+        
+        // Find TAs not on leave during the exam date
+        const [users] = await db.query(
+          `SELECT u.id, u.full_name, u.bilkent_id, u.email
+           FROM users u
+           WHERE u.role = 'ta'
+           AND u.status = 'active'
+           AND u.id != ?
+           AND NOT EXISTS (
+             SELECT 1 FROM leave_requests lr
+             WHERE lr.user_id = u.id
+             AND lr.status = 'approved'
+             AND ? BETWEEN lr.start_date AND lr.end_date
+           )
+           ORDER BY u.full_name`,
+          [requesterId, exam.exam_date]
+        );
+        
+        eligibleUsers = users;
+      }
+      
+      return eligibleUsers;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getSwapStatistics(userId = null) {
+    try {
+      let query = `
+        SELECT 
+          COUNT(*) as total_swaps,
+          SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN assignment_type = 'task' THEN 1 ELSE 0 END) as task_swaps,
+          SUM(CASE WHEN assignment_type = 'exam' THEN 1 ELSE 0 END) as exam_swaps
+        FROM swap_requests
+      `;
+      
+      let params = [];
+      
+      if (userId) {
+        query += ' WHERE requester_id = ? OR target_id = ?';
+        params.push(userId, userId);
+      }
+      
+      const [rows] = await db.query(query, params);
+      return rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+module.exports = Swap;
+```
+
 `backend/models/Task.js`:
 
 ```js
@@ -1326,15 +2376,28 @@ class Task {
     }
   }
 
-  static async complete(taskId, userId) {
+  static async complete(taskId, userId, userRole) {
     try {
-      // Get the task to check if the user is assigned to it
+      // Get the task to check if the user is assigned to it or created it
       const task = await this.findById(taskId);
       if (!task) {
         return { success: false, message: 'Task not found' };
       }
       
-      // Check if the user is assigned to this task
+      // Allow task creator (instructors/staff) to complete the task
+      if ((userRole === 'staff' || userRole === 'department_chair') && task.created_by === userId) {
+        const [result] = await db.query(
+          'UPDATE tasks SET status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [taskId]
+        );
+        
+        return { 
+          success: result.affectedRows > 0, 
+          message: result.affectedRows > 0 ? 'Task marked as completed' : 'Failed to update task'
+        };
+      }
+      
+      // For other users, check if they are assigned to this task
       const [assignment] = await db.query(
         'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
         [taskId, userId]
@@ -1559,6 +2622,158 @@ router.post('/signup', validate(authValidation.signup), signup);
 module.exports = router;
 ```
 
+`backend/routes/leaveRoutes.js`:
+
+```js
+// backend/routes/leaveRoutes.js
+const express = require('express');
+const router = express.Router();
+const { 
+  getAllLeaves, 
+  getLeaveById, 
+  getMyLeaves,
+  createLeave, 
+  updateLeaveStatus, 
+  deleteLeave,
+  getLeaveStatistics
+} = require('../controllers/leaveController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+// All routes are protected and require authentication
+router.use(protect);
+
+/**
+ * @route GET /api/leaves
+ * @desc Get all leave requests (filtered by user role)
+ * @access Private
+ */
+router.get('/', getAllLeaves);
+
+/**
+ * @route GET /api/leaves/my-leaves
+ * @desc Get all leave requests for the current user
+ * @access Private
+ */
+router.get('/my-leaves', getMyLeaves);
+
+/**
+ * @route GET /api/leaves/statistics
+ * @desc Get leave request statistics
+ * @access Private
+ */
+router.get('/statistics', getLeaveStatistics);
+
+/**
+ * @route GET /api/leaves/:id
+ * @desc Get a specific leave request
+ * @access Private
+ */
+router.get('/:id', getLeaveById);
+
+/**
+ * @route POST /api/leaves
+ * @desc Create a new leave request
+ * @access Private
+ */
+router.post('/', createLeave);
+
+/**
+ * @route PUT /api/leaves/:id/status
+ * @desc Update a leave request status (approve/reject)
+ * @access Private (department_chair, admin, staff)
+ */
+router.put('/:id/status', authorize('department_chair', 'admin', 'staff'), updateLeaveStatus);
+
+/**
+ * @route DELETE /api/leaves/:id
+ * @desc Delete a leave request
+ * @access Private
+ */
+router.delete('/:id', deleteLeave);
+
+module.exports = router;
+```
+
+`backend/routes/swapRoutes.js`:
+
+```js
+// backend/routes/swapRoutes.js
+const express = require('express');
+const router = express.Router();
+const { 
+  getAllSwaps, 
+  getSwapById, 
+  getMySwaps,
+  createSwap, 
+  updateSwapStatus, 
+  deleteSwap,
+  getEligibleTargets,
+  getSwapStatistics
+} = require('../controllers/swapController');
+const { protect } = require('../middleware/authMiddleware');
+
+// All routes are protected and require authentication
+router.use(protect);
+
+/**
+ * @route GET /api/swaps
+ * @desc Get all swap requests (filtered by user role)
+ * @access Private
+ */
+router.get('/', getAllSwaps);
+
+/**
+ * @route GET /api/swaps/my-swaps
+ * @desc Get all swap requests involving the current user
+ * @access Private
+ */
+router.get('/my-swaps', getMySwaps);
+
+/**
+ * @route GET /api/swaps/statistics
+ * @desc Get swap request statistics
+ * @access Private
+ */
+router.get('/statistics', getSwapStatistics);
+
+/**
+ * @route GET /api/swaps/eligible-targets/:assignmentId/:type
+ * @desc Get eligible target users for a swap
+ * @access Private
+ */
+router.get('/eligible-targets/:assignmentId/:type', getEligibleTargets);
+
+/**
+ * @route GET /api/swaps/:id
+ * @desc Get a specific swap request
+ * @access Private
+ */
+router.get('/:id', getSwapById);
+
+/**
+ * @route POST /api/swaps
+ * @desc Create a new swap request
+ * @access Private
+ */
+router.post('/', createSwap);
+
+/**
+ * @route PUT /api/swaps/:id/status
+ * @desc Update a swap request status (approve/reject)
+ * @access Private (requires being target user or a staff/admin)
+ */
+router.put('/:id/status', updateSwapStatus);
+
+/**
+ * @route DELETE /api/swaps/:id
+ * @desc Delete a swap request
+ * @access Private
+ */
+router.delete('/:id', deleteSwap);
+
+module.exports = router;
+```
+
 `backend/routes/taskRoutes.js`:
 
 ```js
@@ -1614,6 +2829,8 @@ const cors = require('cors');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
+const swapRoutes = require('./routes/swapRoutes');
 const db = require('./config/db');
 
 // Middleware
@@ -1632,17 +2849,31 @@ db.getConnection()
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes); 
+app.use('/api/tasks', taskRoutes);
+app.use('/api/leaves', leaveRoutes); // New route for leave management
+app.use('/api/swaps', swapRoutes);   // New route for swap requests
+
+// Simple health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send({ message: 'Something went wrong!' });
+  console.error('Error:', err.stack);
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Handle 404 errors for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
 ```

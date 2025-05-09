@@ -7,17 +7,33 @@ frontend
 ├── README.md
 ├── package.json
 ├── public
+│   ├── bilkent-logo.png
+│   ├── favicon.ico
+│   ├── index.html
+│   ├── logo192.png
+│   ├── logo512.png
+│   ├── manifest.json
+│   └── robots.txt
 ├── src
 │   ├── App.css
-│   ├── App.test.tsx
 │   ├── App.tsx
 │   ├── api
 │   │   ├── auth.ts
-│   │   └── config.ts
+│   │   ├── config.ts
+│   │   └── tasks.ts
 │   ├── components
 │   │   ├── auth
-│   │   └── common
-│   │       └── ProtectedRoute.tsx
+│   │   ├── common
+│   │   │   ├── Navigation.css
+│   │   │   ├── Navigation.tsx
+│   │   │   └── ProtectedRoute.tsx
+│   │   └── tasks
+│   │       ├── TaskDetail.css
+│   │       ├── TaskDetail.tsx
+│   │       ├── TaskForm.css
+│   │       ├── TaskForm.tsx
+│   │       ├── TaskList.css
+│   │       └── TaskList.tsx
 │   ├── context
 │   │   └── AuthContext.tsx
 │   ├── hooks
@@ -33,8 +49,13 @@ frontend
 │   │   │   ├── ResetPasswordPage.tsx
 │   │   │   └── SignupPage.tsx
 │   │   ├── staff
-│   │   └── ta
-│   │       └── Dashboard.tsx
+│   │   ├── ta
+│   │   │   └── Dashboard.tsx
+│   │   └── tasks
+│   │       ├── TaskDashboard.css
+│   │       ├── TaskDashboard.tsx
+│   │       ├── TasksPage.css
+│   │       └── TasksPage.tsx
 │   ├── react-app-env.d.ts
 │   ├── setupTests.ts
 │   ├── types
@@ -148,6 +169,95 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 
 ```
 
+`frontend/public/index.html`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+```
+
+`frontend/public/manifest.json`:
+
+```json
+{
+  "short_name": "React App",
+  "name": "Create React App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+
+```
+
+`frontend/public/robots.txt`:
+
+```txt
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow:
+
+```
+
 `frontend/src/App.css`:
 
 ```css
@@ -192,21 +302,6 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 
 ```
 
-`frontend/src/App.test.tsx`:
-
-```tsx
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import App from './App';
-
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
-});
-
-```
-
 `frontend/src/App.tsx`:
 
 ```tsx
@@ -215,6 +310,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import Navigation from './components/common/Navigation';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -224,26 +320,60 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // Dashboard Pages
 import TADashboard from './pages/ta/Dashboard';
+import TasksPage from './pages/tasks/TasksPage';
+import TaskDashboard from './pages/tasks/TaskDashboard';
+import TaskDetail from './components/tasks/TaskDetail';
+import TaskForm from './components/tasks/TaskForm';
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-          
-          {/* Protected TA Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
-            <Route path="/ta/dashboard" element={<TADashboard />} />
-          </Route>
-          
-          {/* Catch all route - redirect to login */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <div className="app-container">
+          <Navigation />
+          <div className="content">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+              
+              {/* Dashboard Routes for different roles */}
+              <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
+                <Route path="/ta/dashboard" element={<TADashboard />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
+                <Route path="/staff/dashboard" element={<TADashboard />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute allowedRoles={['department_chair']} />}>
+                <Route path="/chair/dashboard" element={<TADashboard />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/admin/dashboard" element={<TADashboard />} />
+              </Route>
+
+              {/* Task Management Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin']} />}>
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/tasks/dashboard" element={<TaskDashboard />} />
+                <Route path="/tasks/:id" element={<TaskDetail />} />
+              </Route>
+              
+              {/* Staff/Admin only routes */}
+              <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin']} />}>
+                <Route path="/tasks/create" element={<TaskForm mode="create" />} />
+                <Route path="/tasks/:id/edit" element={<TaskForm mode="edit" />} />
+              </Route>
+              
+              {/* Catch all route - redirect to login */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </div>
       </Router>
     </AuthProvider>
   );
@@ -377,6 +507,336 @@ export const apiUrl = 'http://localhost:5001/api';
 
 ```
 
+`frontend/src/api/tasks.ts`:
+
+```ts
+// src/api/tasks.ts
+import { apiUrl } from './config';
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string;
+  task_type: 'grading' | 'office_hours' | 'proctoring' | 'lab_session' | 'other';
+  course_id: string;
+  due_date: string;
+  duration: number;
+  status: 'active' | 'completed' | 'cancelled';
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  assigned_to_name?: string;
+}
+
+export interface TaskCreateData {
+  title: string;
+  description: string;
+  task_type: 'grading' | 'office_hours' | 'proctoring' | 'lab_session' | 'other';
+  course_id: string;
+  due_date: string;
+  duration: number;
+  assignees?: number[];
+}
+
+export interface TaskUpdateData extends Partial<TaskCreateData> {
+  status?: 'active' | 'completed' | 'cancelled';
+}
+
+// Get all tasks
+export const getAllTasks = async (): Promise<Task[]> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch tasks');
+  }
+
+  return await response.json();
+};
+
+// Get a specific task
+export const getTaskById = async (taskId: number): Promise<Task> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks/${taskId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch task');
+  }
+
+  return await response.json();
+};
+
+// Get upcoming tasks
+export const getUpcomingTasks = async (limit: number = 5): Promise<Task[]> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks/upcoming?limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch upcoming tasks');
+  }
+
+  return await response.json();
+};
+
+// Create a new task
+export const createTask = async (taskData: TaskCreateData): Promise<Task> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to create task');
+  }
+
+  return await response.json();
+};
+
+// Update an existing task
+export const updateTask = async (taskId: number, taskData: TaskUpdateData): Promise<Task> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to update task');
+  }
+
+  return await response.json();
+};
+
+// Mark a task as completed
+export const completeTask = async (taskId: number): Promise<{ message: string }> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks/${taskId}/complete`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to complete task');
+  }
+
+  return await response.json();
+};
+
+// Delete a task
+export const deleteTask = async (taskId: number): Promise<{ message: string }> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to delete task');
+  }
+
+  return await response.json();
+};
+```
+
+`frontend/src/components/common/Navigation.css`:
+
+```css
+.main-navigation {
+  background-color: #0074e4;
+  padding: 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+.nav-links li {
+  margin: 0 15px;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.nav-links a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-links a.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .nav-links {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .nav-links li {
+    margin: 5px 0;
+  }
+} 
+```
+
+`frontend/src/components/common/Navigation.tsx`:
+
+```tsx
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import './Navigation.css';
+
+const Navigation: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
+  const isActive = (path: string) => {
+    return location.pathname === path ? 'active' : '';
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+  };
+
+  return (
+    <nav className="main-navigation">
+      <ul className="nav-links">
+        <li>
+          <a 
+            className={isActive('/ta/dashboard')} 
+            onClick={() => handleNavigation('/ta/dashboard')}
+          >
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a 
+            className={isActive('/tasks')} 
+            onClick={() => handleNavigation('/tasks')}
+          >
+            Tasks
+          </a>
+        </li>
+        <li>
+          <a 
+            className={isActive('/profile')} 
+            onClick={() => handleNavigation('/profile')}
+          >
+            Profile
+          </a>
+        </li>
+        
+        {user.role === 'admin' && (
+          <li>
+            <a 
+              className={isActive('/admin')} 
+              onClick={() => handleNavigation('/admin')}
+            >
+              Admin
+            </a>
+          </li>
+        )}
+      </ul>
+    </nav>
+  );
+};
+
+export default Navigation; 
+```
+
 `frontend/src/components/common/ProtectedRoute.tsx`:
 
 ```tsx
@@ -423,6 +883,1218 @@ export default ProtectedRoute;
 
 ```
 
+`frontend/src/components/tasks/TaskDetail.css`:
+
+```css
+/* src/components/tasks/TaskDetail.css */
+.task-detail-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #0074e4;
+  }
+  
+  .task-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .task-detail-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+  }
+  
+  .task-badge-container {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .task-detail-content {
+    margin-bottom: 20px;
+  }
+  
+  .task-detail-row {
+    display: flex;
+    margin-bottom: 15px;
+  }
+  
+  .task-detail-label {
+    width: 150px;
+    font-weight: 600;
+    color: #555;
+  }
+  
+  .task-detail-value {
+    flex: 1;
+  }
+  
+  .task-detail-description {
+    margin-top: 25px;
+  }
+  
+  .task-detail-description h3 {
+    margin-bottom: 10px;
+    font-size: 18px;
+    color: #333;
+  }
+  
+  .task-detail-description p {
+    line-height: 1.6;
+    color: #555;
+  }
+  
+  .task-detail-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+  
+  .task-detail-actions button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .back-btn {
+    background-color: #f0f0f0;
+    color: #555;
+  }
+  
+  .back-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .complete-btn {
+    background-color: #52c41a;
+    color: white;
+  }
+  
+  .complete-btn:hover {
+    background-color: #389e0d;
+  }
+  
+  .edit-btn {
+    background-color: #faad14;
+    color: white;
+  }
+  
+  .edit-btn:hover {
+    background-color: #d48806;
+  }
+  
+  .delete-btn {
+    background-color: #ff4d4f;
+    color: white;
+  }
+  
+  .delete-btn:hover {
+    background-color: #cf1322;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .status-active {
+    background-color: #e6f7ff;
+    color: #0074e4;
+    border: 1px solid #bae7ff;
+  }
+  
+  .status-completed {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+  }
+  
+  .status-cancelled {
+    background-color: #fff2e8;
+    color: #fa541c;
+    border: 1px solid #ffbb96;
+  }
+  
+  .type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: #f9f0ff;
+    color: #722ed1;
+    border: 1px solid #d3adf7;
+    text-transform: capitalize;
+  }
+  
+  .loading {
+    text-align: center;
+    margin: 40px 0;
+    color: #666;
+  }
+  
+  .error-message {
+    color: #e63946;
+    background-color: #f8d7da;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 20px 0;
+  }
+  
+  .not-found {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .task-detail-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .task-badge-container {
+      margin-top: 10px;
+    }
+    
+    .task-detail-row {
+      flex-direction: column;
+    }
+    
+    .task-detail-label {
+      width: 100%;
+      margin-bottom: 5px;
+    }
+    
+    .task-detail-actions {
+      flex-wrap: wrap;
+    }
+  }
+```
+
+`frontend/src/components/tasks/TaskDetail.tsx`:
+
+```tsx
+// src/components/tasks/TaskDetail.tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Task, getTaskById, completeTask, deleteTask } from '../../api/tasks';
+import './TaskDetail.css';
+
+const TaskDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchTaskDetail = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        const taskData = await getTaskById(parseInt(id));
+        setTask(taskData);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching task details:', err);
+        setError(err.message || 'Failed to load task details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTaskDetail();
+  }, [id]);
+
+  const handleCompleteTask = async () => {
+    if (!id) return;
+
+    try {
+      await completeTask(parseInt(id));
+      
+      // Update the task in the local state
+      setTask(prevTask => 
+        prevTask ? { 
+          ...prevTask, 
+          status: 'completed', 
+          completed_at: new Date().toISOString() 
+        } : null
+      );
+    } catch (err: any) {
+      console.error('Error completing task:', err);
+      setError(err.message || 'Failed to complete task');
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!id) return;
+
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(parseInt(id));
+        navigate('/tasks');
+      } catch (err: any) {
+        console.error('Error deleting task:', err);
+        setError(err.message || 'Failed to delete task');
+      }
+    }
+  };
+
+  // Format date to a more readable format
+  const formatDate = (dateString: string): string => {
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Convert minutes to hours and minutes
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours === 0) {
+      return `${mins} minutes`;
+    } else if (mins === 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    } else {
+      return `${hours} hour${hours > 1 ? 's' : ''} and ${mins} minute${mins > 1 ? 's' : ''}`;
+    }
+  };
+
+  // Get appropriate status badge class
+  const getStatusClass = (status: string): string => {
+    switch (status) {
+      case 'completed':
+        return 'status-completed';
+      case 'cancelled':
+        return 'status-cancelled';
+      default:
+        return 'status-active';
+    }
+  };
+
+  if (loading) {
+    return <div className="loading">Loading task details...</div>;
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
+  if (!task) {
+    return <div className="not-found">Task not found.</div>;
+  }
+
+  return (
+    <div className="task-detail-container">
+      <div className="task-detail-header">
+        <h2>{task.title}</h2>
+        <div className="task-badge-container">
+          <span className={`status-badge ${getStatusClass(task.status)}`}>
+            {task.status}
+          </span>
+          <span className="type-badge">{task.task_type.replace('_', ' ')}</span>
+        </div>
+      </div>
+
+      <div className="task-detail-content">
+        <div className="task-detail-row">
+          <div className="task-detail-label">Course</div>
+          <div className="task-detail-value">{task.course_id}</div>
+        </div>
+
+        <div className="task-detail-row">
+          <div className="task-detail-label">Due Date</div>
+          <div className="task-detail-value">{formatDate(task.due_date)}</div>
+        </div>
+
+        <div className="task-detail-row">
+          <div className="task-detail-label">Duration</div>
+          <div className="task-detail-value">{formatDuration(task.duration)}</div>
+        </div>
+
+        {task.assigned_to_name && (
+          <div className="task-detail-row">
+            <div className="task-detail-label">Assigned To</div>
+            <div className="task-detail-value">{task.assigned_to_name}</div>
+          </div>
+        )}
+
+        {task.completed_at && (
+          <div className="task-detail-row">
+            <div className="task-detail-label">Completed At</div>
+            <div className="task-detail-value">{formatDate(task.completed_at)}</div>
+          </div>
+        )}
+
+        <div className="task-detail-description">
+          <h3>Description</h3>
+          <p>{task.description || 'No description available.'}</p>
+        </div>
+      </div>
+
+      <div className="task-detail-actions">
+        <button 
+          className="back-btn"
+          onClick={() => navigate('/tasks')}
+        >
+          Back to Tasks
+        </button>
+
+        {task.status === 'active' && (
+          <>
+            <button 
+              className="complete-btn"
+              onClick={handleCompleteTask}
+            >
+              Mark as Complete
+            </button>
+            
+            <button 
+              className="edit-btn"
+              onClick={() => navigate(`/tasks/${task.id}/edit`)}
+            >
+              Edit Task
+            </button>
+          </>
+        )}
+        
+        <button 
+          className="delete-btn"
+          onClick={handleDeleteTask}
+        >
+          Delete Task
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default TaskDetail;
+```
+
+`frontend/src/components/tasks/TaskForm.css`:
+
+```css
+/* src/components/tasks/TaskForm.css */
+.task-form-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #0074e4;
+  }
+  
+  .task-form-container h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+  }
+  
+  .error-message {
+    color: #e63946;
+    background-color: #f8d7da;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+  }
+  
+  .permission-error {
+    font-size: 16px;
+    padding: 15px;
+    text-align: center;
+  }
+  
+  .task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #0074e4;
+  }
+  
+  .assignees-select {
+    height: 120px;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+  
+  .form-actions button {
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .cancel-btn {
+    background-color: #f0f0f0;
+    color: #555;
+  }
+  
+  .cancel-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .submit-btn {
+    background-color: #0074e4;
+    color: white;
+  }
+  
+  .submit-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .loading {
+    text-align: center;
+    margin: 40px 0;
+    color: #666;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .task-form-container {
+      padding: 15px;
+    }
+    
+    .form-actions {
+      flex-direction: column;
+    }
+    
+    .form-actions button {
+      width: 100%;
+    }
+  }
+```
+
+`frontend/src/components/tasks/TaskForm.tsx`:
+
+```tsx
+// src/components/tasks/TaskForm.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Task, TaskCreateData, getTaskById, createTask, updateTask } from '../../api/tasks';
+import './TaskForm.css';
+
+interface TaskFormProps {
+  mode: 'create' | 'edit';
+}
+
+const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(mode === 'edit');
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  
+  // Form state
+  const [title, setTitle] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [taskType, setTaskType] = useState<string>('grading');
+  const [courseId, setCourseId] = useState<string>('');
+  const [dueDate, setDueDate] = useState<string>('');
+  const [duration, setDuration] = useState<string>('60');
+  const [assignees, setAssignees] = useState<number[]>([]);
+  const [availableAssignees, setAvailableAssignees] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Get current user from localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (err) {
+        console.error('Error parsing user data:', err);
+      }
+    }
+
+    // Fetch task details if in edit mode
+    const fetchTaskDetails = async () => {
+      if (mode === 'edit' && id) {
+        try {
+          setLoading(true);
+          const taskData = await getTaskById(parseInt(id));
+          
+          // Set form fields
+          setTitle(taskData.title);
+          setDescription(taskData.description || '');
+          setTaskType(taskData.task_type);
+          setCourseId(taskData.course_id);
+          
+          // Format date for the input element (YYYY-MM-DD)
+          const dueDate = new Date(taskData.due_date);
+          const formattedDate = dueDate.toISOString().split('T')[0];
+          setDueDate(formattedDate);
+          
+          setDuration(taskData.duration.toString());
+          
+          // Note: In a real application, you'd fetch the assignees from the task
+          // and set them here. For now, we'll use a placeholder.
+          setAssignees([]);
+          
+          setError(null);
+        } catch (err: any) {
+          console.error('Error fetching task details:', err);
+          setError(err.message || 'Failed to load task details');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Fetch available TAs for assignment
+    // In a real app, this would be an API call to get all available TAs
+    const fetchAvailableTAs = async () => {
+      // Placeholder - replace with actual API call
+      setAvailableAssignees([
+        { id: 1, fullName: 'John Doe' },
+        { id: 2, fullName: 'Jane Smith' },
+        { id: 3, fullName: 'Robert Johnson' },
+      ]);
+    };
+
+    fetchTaskDetails();
+    fetchAvailableTAs();
+  }, [mode, id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!title || !courseId || !dueDate || !duration) {
+      setError('Please fill all required fields');
+      return;
+    }
+
+    const taskData: TaskCreateData = {
+      title,
+      description,
+      task_type: taskType as any,
+      course_id: courseId,
+      due_date: dueDate,
+      duration: parseInt(duration),
+      assignees
+    };
+
+    try {
+      if (mode === 'create') {
+        await createTask(taskData);
+      } else if (mode === 'edit' && id) {
+        await updateTask(parseInt(id), taskData);
+      }
+
+      // Navigate back to tasks list
+      navigate('/tasks');
+    } catch (err: any) {
+      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} task:`, err);
+      setError(err.message || `Failed to ${mode === 'create' ? 'create' : 'update'} task`);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate('/tasks');
+  };
+
+  const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = e.target.options;
+    const selectedAssignees: number[] = [];
+    
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].selected) {
+        selectedAssignees.push(parseInt(options[i].value));
+      }
+    }
+    
+    setAssignees(selectedAssignees);
+  };
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  // Check if user is authorized to create/edit tasks
+  if (user && !['staff', 'department_chair', 'admin'].includes(user.role)) {
+    return (
+      <div className="error-message permission-error">
+        You do not have permission to {mode === 'create' ? 'create' : 'edit'} tasks.
+      </div>
+    );
+  }
+
+  return (
+    <div className="task-form-container">
+      <h2>{mode === 'create' ? 'Create New Task' : 'Edit Task'}</h2>
+      
+      {error && <div className="error-message">{error}</div>}
+      
+      <form onSubmit={handleSubmit} className="task-form">
+        <div className="form-group">
+          <label htmlFor="title">Title *</label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Task title"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="description">Description</label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Task description"
+            rows={4}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="taskType">Task Type *</label>
+          <select
+            id="taskType"
+            value={taskType}
+            onChange={(e) => setTaskType(e.target.value)}
+            required
+          >
+            <option value="grading">Grading</option>
+            <option value="office_hours">Office Hours</option>
+            <option value="proctoring">Proctoring</option>
+            <option value="lab_session">Lab Session</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="courseId">Course ID *</label>
+          <input
+            type="text"
+            id="courseId"
+            value={courseId}
+            onChange={(e) => setCourseId(e.target.value)}
+            placeholder="e.g., CS101"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="dueDate">Due Date *</label>
+          <input
+            type="date"
+            id="dueDate"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="duration">Duration (minutes) *</label>
+          <input
+            type="number"
+            id="duration"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            min="1"
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="assignees">Assignees (Hold Ctrl/Cmd to select multiple)</label>
+          <select
+            id="assignees"
+            multiple
+            value={assignees.map(String)}
+            onChange={handleAssigneeChange}
+            className="assignees-select"
+          >
+            {availableAssignees.map(ta => (
+              <option key={ta.id} value={ta.id}>
+                {ta.fullName}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="form-actions">
+          <button 
+            type="button" 
+            className="cancel-btn"
+            onClick={handleCancel}
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            className="submit-btn"
+          >
+            {mode === 'create' ? 'Create Task' : 'Update Task'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default TaskForm;
+```
+
+`frontend/src/components/tasks/TaskList.css`:
+
+```css
+/* src/components/tasks/TaskList.css */
+.task-list-container {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .error-message {
+    color: #e63946;
+    background-color: #f8d7da;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+  }
+  
+  .loading {
+    text-align: center;
+    margin: 20px 0;
+    color: #666;
+  }
+  
+  .no-tasks {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+  }
+  
+  .task-list {
+    width: 100%;
+    border: 1px solid #0074e4;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .task-list-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 2fr;
+    background-color: #f0f0f0;
+    font-weight: bold;
+    padding: 10px;
+  }
+  
+  .task-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 2fr;
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+  }
+  
+  .task-item:last-child {
+    border-bottom: none;
+  }
+  
+  .task-item:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .task-item.completed {
+    background-color: #f8f8f8;
+    color: #888;
+  }
+  
+  .task-title a {
+    color: #0074e4;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .task-title a:hover {
+    text-decoration: underline;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .status-active {
+    background-color: #e6f7ff;
+    color: #0074e4;
+    border: 1px solid #bae7ff;
+  }
+  
+  .status-completed {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+  }
+  
+  .status-cancelled {
+    background-color: #fff2e8;
+    color: #fa541c;
+    border: 1px solid #ffbb96;
+  }
+  
+  .task-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+  }
+  
+  .task-actions button {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .view-btn {
+    background-color: #f0f0f0;
+    color: #555;
+  }
+  
+  .view-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .complete-btn {
+    background-color: #52c41a;
+    color: white;
+  }
+  
+  .complete-btn:hover {
+    background-color: #389e0d;
+  }
+  
+  .edit-btn {
+    background-color: #faad14;
+    color: white;
+  }
+  
+  .edit-btn:hover {
+    background-color: #d48806;
+  }
+  
+  .delete-btn {
+    background-color: #ff4d4f;
+    color: white;
+  }
+  
+  .delete-btn:hover {
+    background-color: #cf1322;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .task-list-header, .task-item {
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+    
+    .task-duration, .task-actions {
+      display: none;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .task-list-header, .task-item {
+      grid-template-columns: 2fr 1fr;
+    }
+    
+    .task-course, .task-status {
+      display: none;
+    }
+  }
+```
+
+`frontend/src/components/tasks/TaskList.tsx`:
+
+```tsx
+// src/components/tasks/TaskList.tsx
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Task, getAllTasks, completeTask, deleteTask } from '../../api/tasks';
+import './TaskList.css';
+
+interface TaskListProps {
+  limit?: number;
+  showActions?: boolean;
+  filter?: 'all' | 'active' | 'completed';
+}
+
+const TaskList: React.FC<TaskListProps> = ({ 
+  limit, 
+  showActions = true,
+  filter = 'all'
+}) => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const taskData = await getAllTasks();
+
+        // Apply filtering
+        let filteredTasks = taskData;
+        if (filter === 'active') {
+          filteredTasks = taskData.filter(task => task.status === 'active');
+        } else if (filter === 'completed') {
+          filteredTasks = taskData.filter(task => task.status === 'completed');
+        }
+
+        // Apply limit if provided
+        if (limit && limit > 0) {
+          filteredTasks = filteredTasks.slice(0, limit);
+        }
+
+        setTasks(filteredTasks);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching tasks:', err);
+        setError(err.message || 'Failed to load tasks');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [limit, filter]);
+
+  const handleCompleteTask = async (taskId: number) => {
+    try {
+      await completeTask(taskId);
+      
+      // Update the task in the local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, status: 'completed', completed_at: new Date().toISOString() } 
+            : task
+        )
+      );
+    } catch (err: any) {
+      console.error('Error completing task:', err);
+      setError(err.message || 'Failed to complete task');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(taskId);
+        
+        // Remove the task from the local state
+        setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+      } catch (err: any) {
+        console.error('Error deleting task:', err);
+        setError(err.message || 'Failed to delete task');
+      }
+    }
+  };
+
+  // Format date to a more readable format
+  const formatDate = (dateString: string): string => {
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Convert minutes to hours and minutes
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours === 0) {
+      return `${mins}m`;
+    } else if (mins === 0) {
+      return `${hours}h`;
+    } else {
+      return `${hours}h ${mins}m`;
+    }
+  };
+
+  // Get appropriate status badge class
+  const getStatusClass = (status: string): string => {
+    switch (status) {
+      case 'completed':
+        return 'status-completed';
+      case 'cancelled':
+        return 'status-cancelled';
+      default:
+        return 'status-active';
+    }
+  };
+
+  if (loading) {
+    return <div className="loading">Loading tasks...</div>;
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
+  if (tasks.length === 0) {
+    return <div className="no-tasks">No tasks found.</div>;
+  }
+
+  return (
+    <div className="task-list-container">
+      {error && <div className="error-message">{error}</div>}
+      
+      <div className="task-list">
+        <div className="task-list-header">
+          <div className="task-title">Title</div>
+          <div className="task-course">Course</div>
+          <div className="task-date">Due Date</div>
+          <div className="task-duration">Duration</div>
+          <div className="task-status">Status</div>
+          {showActions && <div className="task-actions">Actions</div>}
+        </div>
+        
+        {tasks.map(task => (
+          <div 
+            key={task.id} 
+            className={`task-item ${task.status === 'completed' ? 'completed' : ''}`}
+          >
+            <div className="task-title">
+              <Link to={`/tasks/${task.id}`}>{task.title}</Link>
+            </div>
+            <div className="task-course">{task.course_id}</div>
+            <div className="task-date">{formatDate(task.due_date)}</div>
+            <div className="task-duration">{formatDuration(task.duration)}</div>
+            <div className="task-status">
+              <span className={`status-badge ${getStatusClass(task.status)}`}>
+                {task.status}
+              </span>
+            </div>
+            
+            {showActions && (
+              <div className="task-actions">
+                <button 
+                  className="view-btn"
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                >
+                  View
+                </button>
+                
+                {task.status === 'active' && (
+                  <>
+                    <button 
+                      className="complete-btn"
+                      onClick={() => handleCompleteTask(task.id)}
+                    >
+                      Complete
+                    </button>
+                    
+                    <button 
+                      className="edit-btn"
+                      onClick={() => navigate(`/tasks/${task.id}/edit`)}
+                    >
+                      Edit
+                    </button>
+                  </>
+                )}
+                
+                <button 
+                  className="delete-btn"
+                  onClick={() => handleDeleteTask(task.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default TaskList;
+```
+
 `frontend/src/context/AuthContext.tsx`:
 
 ```tsx
@@ -445,7 +2117,7 @@ interface AuthContextType {
 }
 
 // Create a context with a default value
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
   login: () => {},
@@ -533,6 +2205,23 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f5f7fa;
+}
+
+/* Make sure navigation styling works well with content */
+.main-navigation + .content {
+  padding-top: 20px;
 }
 
 ```
@@ -823,6 +2512,7 @@ export default ForgotPasswordPage;
 // src/pages/auth/LoginPage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./LogInPage.css";
 
 const LoginPage: React.FC = () => {
@@ -832,6 +2522,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (): Promise<void> => {
     // Reset errors
@@ -860,9 +2551,8 @@ const LoginPage: React.FC = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store token and user info in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Use the context login function to update auth state (this also handles localStorage)
+      login(data.token, data.user);
 
       // Redirect based on user role
       switch (data.user.role) {
@@ -1354,6 +3044,10 @@ const TADashboard: React.FC = () => {
     navigate('/');
   };
 
+  const handleViewTasks = () => {
+    navigate('/tasks');
+  };
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>TA Dashboard</h1>
@@ -1365,6 +3059,20 @@ const TADashboard: React.FC = () => {
       <div style={{ marginTop: '20px' }}>
         <h2>My Tasks</h2>
         <p>No tasks available yet.</p>
+        <button 
+          onClick={handleViewTasks}
+          style={{
+            padding: '10px 15px',
+            backgroundColor: '#0074e4',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginTop: '10px'
+          }}
+        >
+          View All Tasks
+        </button>
       </div>
       
       <div style={{ marginTop: '20px' }}>
@@ -1392,6 +3100,165 @@ const TADashboard: React.FC = () => {
 
 export default TADashboard;
 
+```
+
+`frontend/src/pages/tasks/TaskDashboard.css`:
+
+```css
+.task-dashboard {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-dashboard h1 {
+  color: #333;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.task-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.task-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.view-tasks-btn {
+  background-color: #0074e4;
+  color: white;
+}
+
+.view-tasks-btn:hover {
+  background-color: #0056b3;
+}
+
+.create-task-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.create-task-btn:hover {
+  background-color: #218838;
+} 
+```
+
+`frontend/src/pages/tasks/TaskDashboard.tsx`:
+
+```tsx
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import './TaskDashboard.css';
+
+const TaskDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  return (
+    <div className="task-dashboard">
+      <h1>Task Dashboard</h1>
+      <p>Welcome to the Task Management Dashboard</p>
+      
+      <div className="task-actions">
+        <button
+          onClick={() => navigate('/tasks')}
+          className="view-tasks-btn"
+        >
+          View All Tasks
+        </button>
+        
+        {user && ['staff', 'department_chair', 'admin'].includes(user.role) && (
+          <button
+            onClick={() => navigate('/tasks/create')}
+            className="create-task-btn"
+          >
+            Create New Task
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TaskDashboard;
+
+```
+
+`frontend/src/pages/tasks/TasksPage.tsx`:
+
+```tsx
+// src/pages/ta/TasksPage.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import TaskList from '../../components/tasks/TaskList';
+import { useAuth } from '../../context/AuthContext';
+import './TasksPage.css';
+
+const TasksPage: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCreateTask = () => {
+    navigate('/tasks/create');
+  };
+
+  return (
+    <div className="tasks-page-container">
+      <div className="tasks-header">
+        <h1>My Tasks</h1>
+        
+        {/* Show create button only for staff, department chair, and admin */}
+        {user && ['staff', 'department_chair', 'admin'].includes(user.role) && (
+          <button 
+            className="create-task-btn"
+            onClick={handleCreateTask}
+          >
+            Create New Task
+          </button>
+        )}
+      </div>
+      
+      <div className="tasks-filters">
+        <button 
+          className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('all')}
+        >
+          All Tasks
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'active' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('active')}
+        >
+          Active Tasks
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'completed' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('completed')}
+        >
+          Completed Tasks
+        </button>
+      </div>
+      
+      <TaskList filter={activeFilter} />
+    </div>
+  );
+};
+
+export default TasksPage;
 ```
 
 `frontend/src/react-app-env.d.ts`:
