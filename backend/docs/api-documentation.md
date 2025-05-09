@@ -21,6 +21,7 @@ Register a new user in the system.
 ```
 
 **Notes**:
+- Both camelCase (`bilkentId`, `fullName`) and snake_case (`bilkent_id`, `full_name`) parameter formats are accepted
 - `email` must end with `@bilkent.edu.tr`
 - `password` must be at least 6 characters
 - `role` must be one of: ["ta", "staff", "department_chair", "dean", "admin"]
@@ -49,9 +50,12 @@ Register a new user in the system.
 ```json
 {
   "message": "Validation failed",
-  "errors": {
-    "email": "Must use a Bilkent email address (@bilkent.edu.tr)",
-    "password": "Password must be at least 6 characters long"
+  "details": {
+    "missingFields": ["bilkentId"],
+    "errors": {
+      "email": "Must use a Bilkent email address ending with @bilkent.edu.tr",
+      "password": "Password must be at least 6 characters long"
+    }
   }
 }
 ```
@@ -62,6 +66,15 @@ Register a new user in the system.
 ```json
 {
   "message": "User with this Bilkent ID already exists"
+}
+```
+
+- **Code**: 409 Conflict
+- **Condition**: Email already in use
+- **Content**:
+```json
+{
+  "message": "Email is already in use"
 }
 ```
 
@@ -79,6 +92,9 @@ Authenticate a user and get a token.
   "password": "securepassword"
 }
 ```
+
+**Notes**:
+- Both camelCase (`bilkentId`) and snake_case (`bilkent_id`) parameter formats are accepted
 
 **Success Response**:
 - **Code**: 200 OK
@@ -103,8 +119,8 @@ Authenticate a user and get a token.
 ```json
 {
   "message": "Validation failed",
-  "errors": {
-    "bilkentId": "Bilkent ID is required"
+  "details": {
+    "missingFields": ["bilkentId", "password"]
   }
 }
 ```
@@ -132,12 +148,28 @@ Request a password reset link.
 }
 ```
 
+**Notes**:
+- Both camelCase (`bilkentId`) and snake_case (`bilkent_id`) parameter formats are accepted
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**:
 ```json
 {
   "message": "If your ID exists, a password reset link has been sent to your email"
+}
+```
+
+**Error Responses**:
+- **Code**: 400 Bad Request
+- **Condition**: Validation failed
+- **Content**:
+```json
+{
+  "message": "Validation failed",
+  "details": {
+    "missingFields": ["bilkentId"]
+  }
 }
 ```
 
@@ -157,6 +189,10 @@ Reset a user's password using a token.
 }
 ```
 
+**Notes**:
+- Both camelCase (`bilkentId`, `newPassword`) and snake_case (`bilkent_id`, `new_password`) parameter formats are accepted
+- `newPassword` must be at least 6 characters long
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**:
@@ -168,11 +204,25 @@ Reset a user's password using a token.
 
 **Error Responses**:
 - **Code**: 400 Bad Request
-- **Condition**: Invalid token
+- **Condition**: Invalid token or validation failed
 - **Content**:
 ```json
 {
   "message": "Invalid or expired token"
+}
+```
+
+or
+
+```json
+{
+  "message": "Validation failed",
+  "details": {
+    "missingFields": ["token", "bilkentId", "newPassword"],
+    "errors": {
+      "newPassword": "New password must be at least 6 characters long"
+    }
+  }
 }
 ```
 
@@ -211,9 +261,31 @@ Get all tasks based on user role.
 Authorization: Bearer {jwt-token}
 ```
 
+**Notes**:
+- For TAs: Returns only tasks assigned to them
+- For staff/department chairs: Returns all tasks created by them
+- For admins: Returns all tasks in the system
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**: Array of task objects
+```json
+[
+  {
+    "id": 1,
+    "title": "Lab Grading",
+    "description": "Grade Week 5 lab submissions",
+    "task_type": "grading",
+    "course_id": "CS101",
+    "due_date": "2025-05-15",
+    "duration": 120,
+    "status": "active",
+    "created_by": 3,
+    "assigned_to_name": "John Doe",
+    "creator_name": "Dr. Smith"
+  }
+]
+```
 
 ### Get Task by ID
 Get details of a specific task.
@@ -229,7 +301,7 @@ Authorization: Bearer {jwt-token}
 
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Task object
+- **Content**: Task object with details
 
 **Error Response**:
 - **Code**: 404 Not Found
@@ -257,7 +329,22 @@ Authorization: Bearer {jwt-token}
 
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Array of task objects
+- **Content**: Array of task objects (limited to active tasks with due_date >= current date)
+```json
+[
+  {
+    "id": 1,
+    "title": "Lab Grading",
+    "description": "Grade lab submissions for Week 5",
+    "task_type": "grading",
+    "course_id": "CS101",
+    "due_date": "2025-05-15",
+    "duration": 120,
+    "status": "active",
+    "assigned_to_name": "John Doe"
+  }
+]
+```
 
 ### Create Task
 Create a new task.
@@ -284,16 +371,27 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
+**Notes**:
+- `title`, `task_type`, `due_date`, and `duration` are required fields
+
 **Success Response**:
 - **Code**: 201 Created
 - **Content**: Created task object
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 403 Forbidden
 - **Content**:
 ```json
 {
   "message": "You do not have permission to create tasks"
+}
+```
+
+- **Code**: 400 Bad Request
+- **Content**:
+```json
+{
+  "message": "Missing required fields"
 }
 ```
 
@@ -323,16 +421,27 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
+**Notes**:
+- Only the task creator or an admin can update the task
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**: Updated task object
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 403 Forbidden
 - **Content**:
 ```json
 {
   "message": "You do not have permission to update this task"
+}
+```
+
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Task not found"
 }
 ```
 
@@ -348,6 +457,9 @@ Mark a task as completed.
 Authorization: Bearer {jwt-token}
 ```
 
+**Notes**:
+- User must be assigned to the task or be the creator (if staff/department_chair) to mark it as completed
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**:
@@ -357,12 +469,20 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 400 Bad Request
 - **Content**:
 ```json
 {
   "message": "You are not assigned to this task"
+}
+```
+
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Task not found"
 }
 ```
 
@@ -378,6 +498,9 @@ Delete a task.
 Authorization: Bearer {jwt-token}
 ```
 
+**Notes**:
+- Only the task creator or an admin can delete the task
+
 **Success Response**:
 - **Code**: 200 OK
 - **Content**:
@@ -387,12 +510,20 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 403 Forbidden
 - **Content**:
 ```json
 {
   "message": "You do not have permission to delete this task"
+}
+```
+
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Task not found"
 }
 ```
 
@@ -409,6 +540,10 @@ Get all leave requests based on user role.
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- For TAs: Returns only their own leave requests
+- For department chairs, admins, and staff: Returns all leave requests
 
 **Success Response**:
 - **Code**: 200 OK
@@ -444,11 +579,35 @@ Get details of a specific leave request.
 Authorization: Bearer {jwt-token}
 ```
 
+**Notes**:
+- Users can only view their own leave requests unless they are admin, department_chair, or staff
+
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Leave request object
+- **Content**: Leave request object with requester and reviewer details
+```json
+{
+  "id": 1,
+  "user_id": 12,
+  "leave_type": "conference",
+  "start_date": "2025-05-10",
+  "end_date": "2025-05-15",
+  "duration": 6,
+  "reason": "Attending ACM Conference",
+  "status": "approved",
+  "supporting_document_url": "https://example.com/document.pdf",
+  "created_at": "2025-05-01T12:00:00Z",
+  "reviewed_at": "2025-05-02T10:30:00Z",
+  "requester_name": "John Doe",
+  "requester_bilkent_id": "12345678",
+  "requester_email": "john@bilkent.edu.tr",
+  "user_status": "active",
+  "reviewer_name": "Dr. Smith",
+  "reviewer_bilkent_id": "98765432"
+}
+```
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 404 Not Found
 - **Content**:
 ```json
@@ -479,7 +638,25 @@ Authorization: Bearer {jwt-token}
 
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Array of user's leave request objects
+- **Content**: Array of user's leave request objects including reviewer details
+```json
+[
+  {
+    "id": 1,
+    "user_id": 12,
+    "leave_type": "conference",
+    "start_date": "2025-05-10",
+    "end_date": "2025-05-15",
+    "duration": 6,
+    "reason": "Attending ACM Conference",
+    "status": "approved",
+    "supporting_document_url": "https://example.com/document.pdf",
+    "created_at": "2025-05-01T12:00:00Z",
+    "reviewed_at": "2025-05-02T10:30:00Z",
+    "reviewer_name": "Dr. Smith"
+  }
+]
+```
 
 ### Create Leave Request
 Create a new leave request.
@@ -506,8 +683,10 @@ Authorization: Bearer {jwt-token}
 
 **Notes**:
 - `leave_type` must be one of: ["conference", "medical", "family_emergency", "personal", "other"]
-- `start_date` and `end_date` must be valid dates
-- `reason` is required and explains the leave request
+- `start_date`, `end_date`, and `reason` are required fields
+- `start_date` must be before `end_date`
+- Only admins can create backdated leave requests (start_date < today)
+- System checks for conflicts with existing assignments during the leave period
 
 **Success Response**:
 - **Code**: 201 Created
@@ -551,12 +730,45 @@ Authorization: Bearer {jwt-token}
 
 **Error Responses**:
 - **Code**: 400 Bad Request
-- **Condition**: Validation failed
+- **Conditions**: Validation failed, invalid date format, start date after end date, or backdated request (for non-admins)
 - **Content**:
 ```json
 {
   "message": "Missing required fields",
   "required": ["leave_type", "start_date", "end_date", "reason"]
+}
+```
+
+or
+
+```json
+{
+  "message": "Invalid leave type",
+  "validTypes": ["conference", "medical", "family_emergency", "personal", "other"]
+}
+```
+
+or
+
+```json
+{
+  "message": "Invalid date format"
+}
+```
+
+or
+
+```json
+{
+  "message": "Start date must be before end date"
+}
+```
+
+or
+
+```json
+{
+  "message": "Cannot request leave for past dates"
 }
 ```
 
@@ -582,7 +794,8 @@ Authorization: Bearer {jwt-token}
 
 **Notes**:
 - `status` must be either "approved" or "rejected"
-- `reviewer_notes` is optional and can provide additional context for the decision
+- `reviewer_notes` is optional and provides context for the decision
+- Only pending leave requests can be updated
 
 **Success Response**:
 - **Code**: 200 OK
@@ -622,8 +835,24 @@ Authorization: Bearer {jwt-token}
 - **Content**:
 ```json
 {
+  "message": "Invalid status. Must be \"approved\" or \"rejected\""
+}
+```
+
+or
+
+```json
+{
   "message": "Cannot update status of a leave request that has already been processed",
   "currentStatus": "approved"
+}
+```
+
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Leave request not found"
 }
 ```
 
@@ -638,6 +867,10 @@ Delete a leave request (only pending requests or admin).
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- Only the leave requester (for pending requests) or an admin can delete leave requests
+- Non-admin users cannot delete leave requests that have already been reviewed
 
 **Success Response**:
 - **Code**: 200 OK
@@ -665,6 +898,14 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Leave request not found"
+}
+```
+
 ### Get Leave Statistics
 Get statistics about leave requests.
 
@@ -676,6 +917,10 @@ Get statistics about leave requests.
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- For regular users: Returns only their own statistics
+- For admins, department chairs, and staff: Returns system-wide statistics
 
 **Success Response**:
 - **Code**: 200 OK
@@ -703,6 +948,10 @@ Get all swap requests based on user role.
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- For TAs: Returns swaps they're involved in (either as requester or target)
+- For staff, department chairs, and admins: Returns all swap requests
 
 **Success Response**:
 - **Code**: 200 OK
@@ -739,11 +988,14 @@ Get details of a specific swap request.
 Authorization: Bearer {jwt-token}
 ```
 
+**Notes**:
+- Users can only view swap requests they're involved in, unless they are admin, department_chair, or staff
+
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Swap request object with details
+- **Content**: Swap request object with requester, target, and assignment details
 
-**Error Response**:
+**Error Responses**:
 - **Code**: 404 Not Found
 - **Content**:
 ```json
@@ -774,7 +1026,26 @@ Authorization: Bearer {jwt-token}
 
 **Success Response**:
 - **Code**: 200 OK
-- **Content**: Array of swap request objects involving the user
+- **Content**: Array of swap request objects where the user is either the requester or target
+```json
+[
+  {
+    "id": 1,
+    "requester_id": 12,
+    "target_id": 15,
+    "assignment_type": "task",
+    "original_assignment_id": 5,
+    "proposed_assignment_id": 8,
+    "reason": "Schedule conflict with research meeting",
+    "status": "pending",
+    "created_at": "2025-05-01T12:00:00Z",
+    "requester_name": "John Doe",
+    "target_name": "Jane Smith",
+    "assignment_title": "Lab Grading - Week 5",
+    "assignment_subtype": "grading"
+  }
+]
+```
 
 ### Create Swap Request
 Create a new swap request.
@@ -801,9 +1072,11 @@ Authorization: Bearer {jwt-token}
 
 **Notes**:
 - `assignment_type` must be either "task" or "exam"
-- `original_assignment_id` is the ID of the task or exam the requester wants to swap
-- `proposed_assignment_id` is optional - if provided, it represents a two-way swap
-- `reason` explains why the swap is needed
+- `target_id`, `assignment_type`, `original_assignment_id`, and `reason` are required fields
+- Users cannot create swap requests with themselves
+- For tasks: Requester must be assigned to the original task
+- For exams: Requester must be assigned to proctor the original exam
+- If `proposed_assignment_id` is provided (two-way swap), target must be assigned to that task/exam
 
 **Success Response**:
 - **Code**: 201 Created
@@ -830,7 +1103,7 @@ Authorization: Bearer {jwt-token}
 
 **Error Responses**:
 - **Code**: 400 Bad Request
-- **Condition**: Validation failed
+- **Conditions**: Missing fields, validation errors, or assignment issues
 - **Content**:
 ```json
 {
@@ -839,11 +1112,35 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
-- **Code**: 400 Bad Request
-- **Content**:
+or
+
+```json
+{
+  "message": "Invalid assignment type. Must be \"task\" or \"exam\""
+}
+```
+
+or
+
+```json
+{
+  "message": "Cannot create a swap request with yourself"
+}
+```
+
+or
+
 ```json
 {
   "message": "Requester is not assigned to the original task"
+}
+```
+
+or
+
+```json
+{
+  "message": "Target is not assigned to the proposed task"
 }
 ```
 
@@ -869,7 +1166,9 @@ Authorization: Bearer {jwt-token}
 
 **Notes**:
 - `status` must be either "approved" or "rejected"
-- `reviewer_notes` is optional and can provide additional context for the decision
+- `reviewer_notes` is optional and provides context for the decision
+- Only pending swap requests can be updated
+- Target user can respond to the request, or staff/admins can override
 
 **Success Response**:
 - **Code**: 200 OK
@@ -910,8 +1209,24 @@ Authorization: Bearer {jwt-token}
 - **Content**:
 ```json
 {
+  "message": "Invalid status. Must be \"approved\" or \"rejected\""
+}
+```
+
+or
+
+```json
+{
   "message": "Cannot update status of a swap request that has already been processed",
   "currentStatus": "approved"
+}
+```
+
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Swap request not found"
 }
 ```
 
@@ -926,6 +1241,10 @@ Delete a swap request (only pending requests or admin).
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- Only the swap requester (for pending requests) or an admin can delete swap requests
+- Non-admin users cannot delete swap requests that have already been reviewed
 
 **Success Response**:
 - **Code**: 200 OK
@@ -953,6 +1272,14 @@ Authorization: Bearer {jwt-token}
 }
 ```
 
+- **Code**: 404 Not Found
+- **Content**:
+```json
+{
+  "message": "Swap request not found"
+}
+```
+
 ### Get Eligible Targets
 Get a list of eligible targets (TAs) for a swap.
 
@@ -968,6 +1295,9 @@ Authorization: Bearer {jwt-token}
 **URL Parameters**:
 - `assignmentId`: ID of the task or exam to swap
 - `type`: Type of assignment ("task" or "exam")
+
+**Notes**:
+- Returns active TAs who are not on leave during the assignment date
 
 **Success Response**:
 - **Code**: 200 OK
@@ -989,6 +1319,31 @@ Authorization: Bearer {jwt-token}
 ]
 ```
 
+**Error Responses**:
+- **Code**: 400 Bad Request
+- **Content**:
+```json
+{
+  "message": "Invalid type. Must be \"task\" or \"exam\""
+}
+```
+
+- **Code**: 400 Bad Request
+- **Content**:
+```json
+{
+  "message": "Task not found"
+}
+```
+
+or
+
+```json
+{
+  "message": "Exam not found"
+}
+```
+
 ### Get Swap Statistics
 Get statistics about swap requests.
 
@@ -1000,6 +1355,10 @@ Get statistics about swap requests.
 ```
 Authorization: Bearer {jwt-token}
 ```
+
+**Notes**:
+- For regular users: Returns only statistics for swaps they're involved in
+- For admins, department chairs, and staff: Returns system-wide statistics
 
 **Success Response**:
 - **Code**: 200 OK
