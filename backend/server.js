@@ -37,6 +37,7 @@ db.getConnection()
       );
     } catch (error) {
       console.error('Failed to initialize audit logs:', error);
+    }
     // Initialize database tables
     try {
       await initDatabase();
