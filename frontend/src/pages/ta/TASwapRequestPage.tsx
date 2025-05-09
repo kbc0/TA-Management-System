@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import SwapRequestDetailsModal from "./SwapRequestDetailsModal";
 import { SwapRequest } from "./types";
 import { useNavigate } from "react-router-dom"; // En üste ekle
+import { useLocation } from "react-router-dom"; // En üste ekle
 
 type FilterType = "All" | "Pending" | "Accepted" | "Declined";
 
@@ -29,6 +30,7 @@ interface NewSwapForm {
 }
 
 const TASwapRequestPage = () => {
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [selectedRequest, setSelectedRequest] = useState<number | null>(null);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -103,14 +105,31 @@ const TASwapRequestPage = () => {
   //};
 
   useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const filterParam = query.get("filter")?.toLowerCase(); // Case-insensitive ya
+
+    let newFilter: FilterType = "All";
+    switch (filterParam) {
+      case "pending":
+        newFilter = "Pending";
+        break;
+      case "accepted":
+        newFilter = "Accepted";
+        break;
+      case "declined":
+        newFilter = "Declined";
+        break;
+      default:
+        newFilter = "All";
+    }
+    setActiveFilter(newFilter);
+
     document.body.style.paddingTop = "80px";
     document.querySelector(".navbar-collapse")?.classList.remove("show");
     document.body.style.paddingTop = "70px";
     document.body.style.margin = "0";
     document.documentElement.scrollTop = 0;
-  }, []);
 
-  useEffect(() => {
     const fetchData = async () => {
       const sampleData: RequestsState = {
         myRequests: [
@@ -144,14 +163,14 @@ const TASwapRequestPage = () => {
           {
             id: 2,
             title: "CS319 Project Grading",
-            status: "Pending",
+            status: "Accepted",
             yourTask: {
               course: "CS319",
               task: "Project Grading",
               date: "February 15, 2025",
               time: "13:00 - 17:00",
               location: "",
-              status: "Pending",
+              status: "Accepted",
               requester: "You",
               with: "Arda Kirci",
             },
@@ -204,7 +223,7 @@ const TASwapRequestPage = () => {
       setRequests(sampleData);
     };
     fetchData();
-  }, []);
+  }, [location.search]);
 
   // placeholder: fetch user's assignments for swapping
   const assignments = [
@@ -413,7 +432,11 @@ const TASwapRequestPage = () => {
                     ? "btn-primary"
                     : "btn-outline-secondary"
                 }`}
-                onClick={() => setActiveFilter(filter)}
+                onClick={() => {
+                  // URL'yi güncelle
+                  navigate(`/ta-swap-request?filter=${filter.toLowerCase()}`);
+                  setActiveFilter(filter);
+                }}
               >
                 {filter}
               </button>
@@ -434,41 +457,47 @@ const TASwapRequestPage = () => {
                 </h2>
               </div>
               <div className="card-body">
-              {filteredRequests(requests.myRequests).map((request) => (
-  <div key={request.id} className="request-card mb-3">
-    <div className="d-flex justify-content-between align-items-start">
-      <div>
-        <h3 className="h6 fw-bold mb-1">{request.title}</h3>
-        <div className="text-muted small mb-2">
-          {/* Tarih ve saat bilgilerini buraya taşıyın */}
-          {request.yourTask.date && (
-            <span className="me-3">{request.yourTask.date}</span>
-          )}
-          {request.yourTask.time && (
-            <span className="me-3">{request.yourTask.time}</span>
-          )}
-        </div>
-        <p className="small mb-0">
-          Requested to swap with: {request.yourTask.with}
-        </p>
-      </div>
-      <div className={`status-badge ${request.yourTask.status.toLowerCase()}`}>
-        {request.status}
-      </div>
-    </div>
-    <div className="mt-2">
-      <button className="btn btn-link btn-sm text-danger p-0 me-3">
-        Cancel Request
-      </button>
-      <button
-        className="btn btn-link btn-sm p-0"
-        onClick={() => handleViewDetails(request)}
-      >
-        View Details
-      </button>
-    </div>
-  </div>
-))}
+                {filteredRequests(requests.myRequests).map((request) => (
+                  <div key={request.id} className="request-card mb-3">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h3 className="h6 fw-bold mb-1">{request.title}</h3>
+                        <div className="text-muted small mb-2">
+                          {/* Tarih ve saat bilgilerini buraya taşıyın */}
+                          {request.yourTask.date && (
+                            <span className="me-3">
+                              {request.yourTask.date}
+                            </span>
+                          )}
+                          {request.yourTask.time && (
+                            <span className="me-3">
+                              {request.yourTask.time}
+                            </span>
+                          )}
+                        </div>
+                        <p className="small mb-0">
+                          Requested to swap with: {request.yourTask.with}
+                        </p>
+                      </div>
+                      <div
+                        className={`status-badge ${request.yourTask.status.toLowerCase()}`}
+                      >
+                        {request.status}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <button className="btn btn-link btn-sm text-danger p-0 me-3">
+                        Cancel Request
+                      </button>
+                      <button
+                        className="btn btn-link btn-sm p-0"
+                        onClick={() => handleViewDetails(request)}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -519,12 +548,12 @@ const TASwapRequestPage = () => {
                           </button>
                         </>
                       )}
-                      <button
+                      {/*<button
                         className="btn btn-link btn-sm p-0"
                         onClick={() => handleViewDetails(request)}
                       >
                         View Details
-                      </button>
+                      </button>*/}
                     </div>
                   </div>
                 ))}
@@ -537,15 +566,15 @@ const TASwapRequestPage = () => {
       {/* Modals */}
       {showAcceptModal && (
         <div className="modal-overlay">
-          <div className="modal-dialog modal-dialog-centered modal-xl">
-            <div className="modal-content">
-              <div className="modal-header">
+          <div className="modal-dialog modal-dialog-centered custom-modal">
+            <div className="modal-content custom-content">
+              <div className="modal-header cuntom-header">
                 <h5 className="modal-title">Confirm Acceptance</h5>
               </div>
-              <div className="modal-body">
-                <p>Are you sure you want to accept this request?</p>
+              <div className="modal-body custom-body">
+                <p>Are you sure? Do you want to accept this request?</p>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer custom-footer">
                 <button
                   className="btn btn-success"
                   onClick={() => confirmAction("accept")}
@@ -555,6 +584,35 @@ const TASwapRequestPage = () => {
                 <button
                   className="btn btn-secondary"
                   onClick={() => setShowAcceptModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeclineModal && (
+        <div className="modal-overlay">
+          <div className="modal-dialog modal-dialog-centered custom-modal">
+            <div className="modal-content custom-content">
+              <div className="modal-header cuntom-header">
+                <h5 className="modal-title">Decline Acceptance</h5>
+              </div>
+              <div className="modal-body custom-body">
+                <p>Are you sure? Do you want to decline this request?</p>
+              </div>
+              <div className="modal-footer custom-footer">
+                <button
+                  className="btn btn-success"
+                  onClick={() => confirmAction("decline")}
+                >
+                  Yes, Decline it
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeclineModal(false)}
                 >
                   Cancel
                 </button>
@@ -693,8 +751,14 @@ const TASwapRequestPage = () => {
                       yourTask: {
                         course: selectedAssignment.label.split(" - ")[0],
                         task: "",
-                        date: selectedAssignment.label.split(" - ")[1].split(",")[0].trim(),
-                        time: selectedAssignment.label.split(" - ")[1].split(",")[1].trim(),
+                        date: selectedAssignment.label
+                          .split(" - ")[1]
+                          .split(",")[0]
+                          .trim(),
+                        time: selectedAssignment.label
+                          .split(" - ")[1]
+                          .split(",")[1]
+                          .trim(),
                         location: "",
                         status: "Pending",
                         requester: "You",

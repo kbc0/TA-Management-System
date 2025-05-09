@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import "./HomePageForTA.css";
 import { useNavigate } from "react-router-dom";
 //import axios from "axios";
@@ -6,10 +7,6 @@ import { useNavigate } from "react-router-dom";
 interface Task {
   name: string;
   time: string;
-}
-
-interface PendingApproval {
-  name: string;
 }
 
 interface Announcement {
@@ -31,9 +28,23 @@ const HomePage: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
 
   const navigate = useNavigate();
+
+  const routeMap = {
+    leave: "/ta-leave-request",
+    task: "/ta-my-tasks",
+    swap: "/ta-swap-request",
+  } as const;
+
+  type ApprovalType = keyof typeof routeMap;
+
+  interface PendingApproval {
+    name: string;
+    type: ApprovalType; // Now explicitly typed
+  }
+
+  // Then in your click handler:
 
   useEffect(() => {
     fetchUserInfo();
@@ -79,9 +90,18 @@ const HomePage: React.FC = () => {
   ];
 
   const pendingApprovals: PendingApproval[] = [
-    { name: "Leave Request" },
-    { name: "Task Completion" },
-    { name: "Swap Request" },
+    {
+      name: "Leave Request",
+      type: "leave", // Must match routeMap key
+    },
+    {
+      name: "Task Completion",
+      type: "task", // Must match routeMap key
+    },
+    {
+      name: "Swap Request",
+      type: "swap", // Must match routeMap key
+    },
   ];
 
   const announcements: Announcement[] = [
@@ -92,8 +112,8 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="homepage-container">
- {/* Navigation Bar */}
- <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+      {/* Navigation Bar */}
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
         <div className="container-fluid">
           <a className="navbar-brand" href="#" style={{ gap: "20px" }}>
             <img
@@ -344,8 +364,14 @@ const HomePage: React.FC = () => {
                   <span>{approval.name}</span>
                   <button
                     onClick={() => {
-                      // 🔗 Burada ilgili pending approval detay sayfasına yönlendirme olacak
-                      console.log(`Reviewing ${approval.name}...`);
+                      // Determine the correct route based on approval type
+                      const routeMap = {
+                        leave: "/ta-leave-request",
+                        task: "/ta-my-tasks", // Create this route if needed
+                        swap: "/ta-swap-request",
+                      };
+
+                      navigate(`${routeMap[approval.type]}?filter=pending`);
                     }}
                   >
                     Review
@@ -353,7 +379,6 @@ const HomePage: React.FC = () => {
                 </li>
               ))}
             </ul>
-            <button className="view-all-button">View All Pending</button>
           </div>
         </div>
       </div>

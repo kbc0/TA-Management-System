@@ -225,3 +225,13 @@
 .dropdown-item:hover {
   background-color: #f8f9fa;
 }
+
+.pending-highlight {
+  border: 3px solid #ffd700; /* Daha parlak sarı */
+  box-shadow: 
+    0 0 25px rgba(255, 215, 0, 0.5), /* Daha güçlü gölge */
+    0 0 15px rgba(255, 255, 255, 0.6) inset; /* İç beyaz parıltı */
+  animation: pulse 2s infinite; /* Titreşim efekti */
+  transform: scale(1.02); /* Hafif büyütme */
+  transition: all 0.3s ease;
+}

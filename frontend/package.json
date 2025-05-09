@@ -4,7 +4,6 @@
   "private": true,
   "dependencies": {
     "@types/node": "^18.15.0",
-    "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.9.0",
@@ -42,6 +41,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
-    "@types/jest": "^29.5.14"
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.1.3"
   }
 }

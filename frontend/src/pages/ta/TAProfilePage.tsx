@@ -13,8 +13,45 @@ import "./TAProfilePage.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import { useNavigate } from "react-router-dom"; // En üste ekle
 
+//////////////////////////////////
+interface User {
+  fullName: string;
+  email: string;
+  studentId: string;
+  phone: string;
+  department: string;
+  profileImage: string;
+  skills: string[];
+  courses: string[];
+  qualifications: string[];
+  totalHours: number;
+  maxHours: number;
+  tasksCompleted: number;
+  totalTasks: number;
+  courseHours: { course: string; hours: number }[];
+}
+
+interface LeaveRequest {
+  id: string;
+  start: string;
+  end: string;
+  reason: string;
+  status: "Pending" | "Approved" | "Rejected";
+}
+
+interface Duty {
+  id: string;
+  date: string;
+  course: string;
+  type: string;
+  duration: string;
+  status?: string;
+}
+//////////////////////////////////////////////
+
 const TAProfilePage: React.FC = () => {
   const user = {
+    ////////////////
     fullName: "Kamil Berkay Çetin",
     email: "kberkay@bilkent.edu.tr",
     studentId: "22203156",
@@ -75,7 +112,7 @@ const TAProfilePage: React.FC = () => {
         },
       ],
     },
-  };
+  }; //////////////////Silinecek
 
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">(
     "upcoming"
@@ -93,18 +130,17 @@ const TAProfilePage: React.FC = () => {
 
   useEffect(() => {
     //document.body.style.paddingTop = "80px";
-      // Reset body styles and scroll on mount
-      document.body.style.paddingTop = "80px";
-      document.querySelector(".navbar-collapse")?.classList.remove("show");
-      document.body.style.paddingTop = "0";
-      document.body.style.margin = "0";
+    // Reset body styles and scroll on mount
+    document.body.style.paddingTop = "80px";
+    document.querySelector(".navbar-collapse")?.classList.remove("show");
+    document.body.style.paddingTop = "0";
+    document.body.style.margin = "0";
 
-  // Clean up any lingering Bootstrap collapse classes
-  const navCollapse = document.querySelector(".navbar-collapse");
-  if (navCollapse && navCollapse.classList.contains("show")) {
-    navCollapse.classList.remove("show");
-  }
-    
+    // Clean up any lingering Bootstrap collapse classes
+    const navCollapse = document.querySelector(".navbar-collapse");
+    if (navCollapse && navCollapse.classList.contains("show")) {
+      navCollapse.classList.remove("show");
+    }
   }, []);
 
   return (

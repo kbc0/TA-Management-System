@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./TAMyTasksPage.css";
-import { useNavigate } from "react-router-dom"; // En üste ekle
+import { useNavigate, useLocation, useParams } from "react-router-dom"; // En üste ekle
 
 interface Task {
   id: number;
@@ -28,13 +27,19 @@ interface NewTaskForm {
 interface CalendarEvent {
   date: number;
   events: string[];
+  isCurrentDay?: boolean;
+  isPrevMonth?: boolean;
+  isNextMonth?: boolean;
 }
 
 const TAMyTasksPage = () => {
+  const location = useLocation();
+  const pendingSectionRef = useRef<HTMLDivElement>(null);
+  const [highlightPending, setHighlightPending] = useState(false);
+
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
-  const [calendarData, setCalendarData] = useState<CalendarEvent[][]>([]);
   const [activeMenu, setActiveMenu] = useState("tasks");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -42,7 +47,23 @@ const TAMyTasksPage = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const generateCalendarData = (month: number, year: number) => {
+  const [newTask, setNewTask] = useState<NewTaskForm>({
+    course: "",
+    taskType: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    description: "",
+    attachments: [],
+  });
+
+  const navigate = useNavigate(); // Fonksiyon içinde tanımla
+
+  const generateCalendarData = (
+    month: number,
+    year: number,
+    tasks: Task[]
+  ): CalendarEvent[][] => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const today = new Date();
@@ -68,7 +89,7 @@ const TAMyTasksPage = () => {
       const date = new Date(year, month, day);
       currentWeek.push({
         date: day,
-        events: getEventsForDate(date),
+        events: getEventsForDate(date, tasks), // Görevleri parametre olarak ekleyin
         isCurrentDay: date.toDateString() === today.toDateString(),
       });
 
@@ -94,30 +115,22 @@ const TAMyTasksPage = () => {
   };
 
   // 3. Etkinlikleri getirme fonksiyonu (mock veri):
-  const getEventsForDate = (date: Date) => {
-    // Örnek etkinlikler - gerçek uygulamada API'den çekilmeli
-    const events: string[] = [];
-    if (date.getDate() === 15) {
-      events.push("Office Hours (13:00-15:00)");
-    }
-    if (date.getDate() === 20) {
-      events.push("CS101 Lab (10:00-12:00)");
-    }
-    return events;
+  const getEventsForDate = (date: Date): string[] => {
+    //APIdan çekilmeli
+    const dateString = date.toISOString().split("T")[0];
+    return [...upcomingTasks, ...pendingTasks, ...completedTasks]
+      .filter((task) => {
+        const taskDate = new Date(task.date).toISOString().split("T")[0];
+        return taskDate === dateString;
+      })
+      .map((task) => `${task.title}${task.time ? ` (${task.time})` : ""}`);
   };
 
+  const calendarData = useMemo(() => {
+    const allTasks = [...upcomingTasks, ...pendingTasks, ...completedTasks];
+    return generateCalendarData(currentMonth, currentYear, allTasks);
+  }, [currentMonth, currentYear, upcomingTasks, pendingTasks, completedTasks]);
   // Form verileri için:
-  const [newTask, setNewTask] = useState<NewTaskForm>({
-    course: "",
-    taskType: "",
-    date: "",
-    startTime: "",
-    endTime: "",
-    description: "",
-    attachments: [],
-  });
-
-  const navigate = useNavigate(); // Fonksiyon içinde tanımla
 
   // 🧭 YÖNLENDİRME FONKSİYONU
   const handleNavigation = (path: string) => {
@@ -129,7 +142,18 @@ const TAMyTasksPage = () => {
   };
 
   useEffect(() => {
-    setCalendarData(generateCalendarData(currentMonth, currentYear));
+    const query = new URLSearchParams(location.search);
+    const filterParam = query.get("filter");
+
+    if (filterParam === "pending") {
+      setHighlightPending(true);
+      // 4. Pending bölümüne otomatik scroll
+      setTimeout(() => {
+        pendingSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+
+    // setCalendarData(generateCalendarData(currentMonth, currentYear));
     document.querySelector(".navbar-collapse")?.classList.remove("show");
     document.body.style.paddingTop = "80px";
     document.body.style.marginTop = "0";
@@ -249,7 +273,7 @@ const TAMyTasksPage = () => {
     setUpcomingTasks(mockTasks.upcoming);
     setPendingTasks(mockTasks.pending);
     setCompletedTasks(mockTasks.completed);
-  }, [currentMonth, currentYear]);
+  }, [location.search]);
 
   // 5. Ay navigasyon fonksiyonları:
   const handlePrevMonth = () => {
@@ -291,8 +315,8 @@ const TAMyTasksPage = () => {
   return (
     <div className="container-fluid p-0 role-ta">
       {/* Navigation Bar */}
-     {/* Navigation Bar */}
-     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+      {/* Navigation Bar */}
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
         <div className="container-fluid">
           <a className="navbar-brand" href="#" style={{ gap: "20px" }}>
             <img
@@ -462,7 +486,7 @@ const TAMyTasksPage = () => {
                   >
                     <i className="fas fa-plus me-1"></i> Submit Completed Task
                   </button>
-                  <div className="btn-group">
+                  {/* <div className="btn-group">
                     <button className="btn btn-sm btn-outline-secondary active">
                       All
                     </button>
@@ -476,6 +500,7 @@ const TAMyTasksPage = () => {
                       Pending Approval
                     </button>
                   </div>
+                  */}
                 </div>
               </div>
             </div>
@@ -584,7 +609,12 @@ const TAMyTasksPage = () => {
             </div>
 
             {/* Pending Approval */}
-            <div className="card mb-4">
+            <div
+              className={`card mb-4 ${
+                highlightPending ? "pending-highlight" : ""
+              }`}
+              ref={pendingSectionRef}
+            >
               <div className="card-header">
                 <h5 className="card-title mb-0">Pending Approval</h5>
               </div>
@@ -813,6 +843,16 @@ const TAMyTasksPage = () => {
                   onClick={() => {
                     const nextId =
                       Math.max(0, ...pendingTasks.map((t) => t.id)) + 1;
+
+                    const submissionDate = new Date().toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    );
+
                     setPendingTasks([
                       ...pendingTasks,
                       {
@@ -822,6 +862,7 @@ const TAMyTasksPage = () => {
                         time: `${newTask.startTime} - ${newTask.endTime}`,
                         description: newTask.description,
                         status: "pending",
+                        submittedDate: submissionDate, // Bu satırı ekleyin
                       },
                     ]);
                     setShowConfirmModal(false);

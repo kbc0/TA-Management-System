@@ -162,3 +162,43 @@
       padding: 0.25rem 0.5rem;
     }
   }
+
+
+
+  /* Custom modal size */
+.custom-modal {
+  max-width: 600px; /* Adjust this value as needed */
+  width: 95%; /* For responsive behavior */
+}
+
+/* Increase padding in all sections */
+.custom-content {
+  padding: 20px;
+}
+
+.custom-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.custom-body {
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.custom-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #dee2e6;
+}
+
+/* Adjust title spacing */
+.custom-header h5 {
+  margin-bottom: 0;
+  font-size: 1.5rem;
+}
+
+/* Optional: Increase button size */
+.custom-footer .btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+}

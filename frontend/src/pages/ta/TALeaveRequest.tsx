@@ -1,6 +1,6 @@
 // LeaveRequestsPage.tsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // En üste ekle
+import { useNavigate, useLocation } from "react-router-dom"; // En üste ekle
 import { Pie } from "react-chartjs-2";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./TALeaveRequest.css";
@@ -30,6 +30,14 @@ interface ConflictTask {
 }
 
 const TALeaveRequest = () => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initialFilter = params.get("filter") as
+    | "all"
+    | "pending"
+    | "approved"
+    | "rejected"
+    | null;
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [conflictTasks, setConflictTasks] = useState<ConflictTask[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(
@@ -38,11 +46,16 @@ const TALeaveRequest = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState("leave-requests");
+
   const [leaveFilter, setLeaveFilter] = useState<
     "all" | "pending" | "approved" | "rejected"
-  >("all");
+  >(initialFilter || "all");
   const [showNewConfirmModal, setShowNewConfirmModal] = useState(false);
   const navigate = useNavigate(); // Fonksiyon içinde tanımla
+
+  const [selectedFilter, setSelectedFilter] = useState<
+    "All" | "Pending" | "Approved"
+  >("All");
 
   // New Leave Request formu için
   interface NewLeaveForm {
@@ -63,11 +76,19 @@ const TALeaveRequest = () => {
 
   // 🚀 API ENTEGRASYON NOKTASI - Veri çekme
   useEffect(() => {
-    // Mock Leave Data
     document.querySelector(".navbar-collapse")?.classList.remove("show");
     document.body.style.paddingTop = "0";
+    document.body.style.marginTop = "0";
     document.body.style.margin = "0";
     document.documentElement.scrollTop = 0;
+    const query = new URLSearchParams(location.search);
+    const filterParam = query.get("filter");
+    if (
+      ["all", "pending", "approved", "rejected"].includes(filterParam || "")
+    ) {
+      setLeaveFilter((filterParam || "all") as typeof leaveFilter);
+    }
+
     const mockLeaveData: LeaveRequest[] = [
       {
         id: 1,
@@ -129,14 +150,13 @@ const TALeaveRequest = () => {
 
     setLeaveRequests(mockLeaveData);
     setConflictTasks(mockConflictTasks);
-  }, []);
+  }, [location.search]);
 
   const handleDelete = (id: number) => {
     setLeaveRequests((prev) => prev.filter((request) => request.id !== id));
     setShowDeleteModal(false);
     // 🚀 API DELETE çağrısı buraya
   };
-
 
   const chartData = {
     labels: ["Medical", "Conference", "Personal", "Family"],
@@ -322,7 +342,9 @@ const TALeaveRequest = () => {
                         className={`btn btn-sm btn-outline-secondary ${
                           leaveFilter === status ? "active" : ""
                         }`}
-                        onClick={() => setLeaveFilter(status)}
+                        onClick={() => {
+                          navigate(`/ta-leave-request?filter=${status}`);
+                        }}
                       >
                         {status === "all"
                           ? "All"
@@ -407,9 +429,11 @@ const TALeaveRequest = () => {
             <div className="card mb-4">
               <div className="card-body">
                 <div className="card">
-                <div className="card-header pt-md-3 pt-2 pb-md-2 pb-1">
-  <h5 className="card-title mb-md-2 mb-1">Leave Statistics</h5>
-</div>
+                  <div className="card-header pt-md-3 pt-2 pb-md-2 pb-1">
+                    <h5 className="card-title mb-md-2 mb-1">
+                      Leave Statistics
+                    </h5>
+                  </div>
                   <div className="card-body">
                     <table className="table table-sm">
                       <tbody>
@@ -486,8 +510,7 @@ const TALeaveRequest = () => {
                   ))}
                 </div>
               </div>
-              <div className="card-footer text-center">
-              </div>
+              <div className="card-footer text-center"></div>
             </div>
           </div>
         </div>
