@@ -6,6 +6,7 @@ const app = express();
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
+const courseRoutes = require('./routes/courseRoutes');
 const db = require('./config/db');
 const loggingService = require('./services/LoggingService');
 const { errorLogger } = require('./middleware/auditLogger');
@@ -13,8 +14,18 @@ const { initDatabase } = require('./config/dbInit');
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Allow all origins during development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
+
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 
 // Test DB Connection and Initialize Database
@@ -54,6 +65,7 @@ db.getConnection()
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/courses', courseRoutes);
 
 // Audit logging for errors
 app.use(errorLogger);
