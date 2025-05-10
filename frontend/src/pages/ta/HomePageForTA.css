@@ -57,11 +57,11 @@
   }
   
   .main-content {
-    margin-top: 130px;
+    margin-top: 130px;/*80 px olabilir*/
     display: grid;
-    grid-template-columns: 2.5fr 1fr;
-    gap: 20px;
-    padding: 0 20px 20px 20px;
+    grid-template-columns: 2.5fr 1fr; /* 2 fr 1fr olarak yazılabilir*/ 
+    gap: 20px;/*30 px olabilir*/
+    padding: 0 20px 20px 20px; /*Sondaki 20px silineblir*/
     align-items: start;
   }
   
@@ -80,9 +80,9 @@
   }
 
   .welcome-box {
-    margin-top: 70px;
+    margin-top: 70px; /*30px olabilir*/
     background: white;
-    padding: 20px;
+    padding: 20px;   /*1.5 rem*/
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.05);
   }
@@ -112,7 +112,7 @@
   }
 
   .tasks-box{
-    margin-top: 70px;
+    margin-top: 70px; /*0 olabilir*/
   }
 
   .action-buttons {
@@ -269,3 +269,308 @@
   color: #fff;                              /* Vurgu metin rengi */
   border-radius: 4px;                       /* İsteğe bağlı kenar yuvarlama */
 }
+
+
+
+.homepage-container {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f9f9f9;
+    min-height: 100vh;
+  }
+  
+  .navbar {
+    background: #0074e4;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 20px;
+    align-items: center;
+    overflow: visible;
+    position: relative;
+  }
+  
+  .logo {
+    margin-top: 20px;
+    width: 50px;
+  }
+  
+  .menu span {
+    margin: 0 12px;
+    cursor: pointer;
+  }
+  
+  .menu .active {
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  
+  .user-info {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+  }
+  
+  .notification {
+    margin-right: 10px;
+    position: relative;
+  }
+  
+  .badge {
+    background-color: red;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 12px;
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    color: white;
+  }
+  
+  .username {
+    font-weight: 500;
+  }
+  
+  .main-content {
+    margin-top: 130px;
+    display: grid;
+    grid-template-columns: 2.5fr 1fr;
+    gap: 20px;
+    padding: 0 20px 20px 20px;
+    align-items: start;
+  }
+  
+  .left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .section-title {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    border-bottom: none;
+  }
+
+  .welcome-box {
+    margin-top: 70px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  }
+  
+  .left-side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .quick-actions,
+  .announcements-box {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  }
+
+  .quick-actions,
+  .announcements-box,
+  .tasks-box,
+  .pending-box {
+    border: 1px solid #0074e4;
+    border-radius: 8px;
+    background: white;
+    padding: 16px;
+  }
+
+  .tasks-box{
+    margin-top: 70px;
+  }
+
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+
+  /* Update button hover states */
+.action-buttons button:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+/*This is new can be deleted*/
+  
+  .action-buttons button {
+    padding: 10px;
+    background: #0074e4;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  .side-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .tasks-box,
+  .pending-box button {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  }
+  
+  .tasks-box ul,
+  .pending-box ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .tasks-box li,
+  .pending-box li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    height: 60px;
+  }
+  
+  .duration {
+    background: #0074e4;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  
+  .view-all-button {
+    margin-top: 10px;
+    background: none;
+    border: none;
+    color: #0074e4;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 14px;
+  }
+  
+  .announcements-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+  
+  .announcements-scroll p {
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+
+
+/* Add scrollbar styling */
+.announcements-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.announcements-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.announcements-scroll::-webkit-scrollbar-thumb {
+  background: #0074e4;
+  border-radius: 4px;
+}
+/*This is new can be deleted*/
+
+
+  
+  .pending-box button {
+    background-color: white;
+    color: #0074e4;
+    border: 1px solid #0074e4;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+  }
+
+  .pending-box button:hover {
+    background-color: #e6f0ff;
+  }
+  /* HomePageForTA.css */
+
+/* Logo + App adı kapsayıcı */
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+/* App adı */
+.brand-text {
+  margin-left: 12px;         /* logodan biraz boşluk */
+  font-weight: 500;          /* menü öğesiyle aynı kalınlık */
+  font-size: 16px;           /* menü öğesiyle aynı boyut */
+  color: white;              /* navbar metin rengi */
+  text-decoration: none;     /* altı çizili aktif stil yok */
+  cursor: default;           /* tıklanabilir değil */
+}
+
+/* Menü öğeleriniz zaten şöyle: */
+.menu span {
+  margin: 0 12px;
+  cursor: pointer;
+}
+.menu .active {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;      /* beyaz arka plan */
+  color: #000000;           /* siyah metin */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 100;
+  min-width: 120px;
+    right: 20px !important; /* Match navbar padding, new can be deleted */
+  top: 50px !important; /*  new can be deleted */
+} 
+
+.user-dropdown .dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #212529;           /* bootstrap’in normal metin rengi */
+
+}
+
+.user-dropdown .dropdown-item:hover {
+  background: #f1f1f1;
+  color: #000;
+}
+
+.nav-link.active {
+  background-color: rgba(255,255,255,0.2); /* Örnek arka plan rengi */
+  color: #fff;                              /* Vurgu metin rengi */
+  border-radius: 4px;                       /* İsteğe bağlı kenar yuvarlama */
+}
+
+/* Yukarıdaki 7 css rule are new*/

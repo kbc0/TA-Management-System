@@ -5,7 +5,7 @@ tsx
 
 
  */
-
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css"; // Add this line
 import "bootstrap/dist/js/bootstrap.bundle.min.js"; // Bootstrap JS eklendi
@@ -14,69 +14,64 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import { useNavigate } from "react-router-dom"; // En üste ekle
 
 const TAProfilePage: React.FC = () => {
-  const user = {
-    fullName: "Kamil Berkay Çetin",
-    email: "kberkay@bilkent.edu.tr",
-    studentId: "22203156",
-    phone: "+90 555 123 4567",
-    department: "PhD Student - Computer Science",
-    profileImage: "https://via.placeholder.com/150",
-    skills: ["Java", "Python", "C++", "JavaScript"],
-    courses: ["CS101", "CS102", "CS201", "CS319", "CS315"],
-    qualifications: ["Lab Instructor", "Grading", "Project Mentor"],
-    totalHours: 48,
-    maxHours: 80,
-    tasksCompleted: 18,
-    totalTasks: 25,
-    courseHours: [{ course: "CS101 - Introduction to Programming", hours: 20 }],
-    leaveRequests: [
-      {
-        start: "2025-04-01",
-        end: "2025-04-05",
-        reason: "Conference Attendance",
-        status: "Approved",
-      },
-      {
-        start: "2025-05-15",
-        end: "2025-05-16",
-        reason: "Medical Appointment",
-        status: "Pending",
-      },
-    ],
-    duties: {
-      upcoming: [
-        {
-          date: "2025-03-18",
-          course: "CS101",
-          type: "Lab Session",
-          duration: "2 hours",
-          status: "Upcoming",
-        },
-        {
-          date: "2025-03-20",
-          course: "CS319",
-          type: "Exam Proctoring",
-          duration: "3 hours",
-          status: "Pending Swap",
-        },
-      ],
-      completed: [
-        {
-          date: "2025-03-15",
-          course: "CS102",
-          type: "Grading",
-          duration: "4 hours",
-        },
-        {
-          date: "2025-03-14",
-          course: "CS315",
-          type: "Office Hours",
-          duration: "2 hours",
-        },
-      ],
-    },
-  };
+  interface User {
+    id: number;
+    full_name: string;
+    email: string;
+    student_id: string;
+    phone: string;
+    department: string;
+    profile_image: string;
+    skills: string[];
+    courses: string[];
+    qualifications: string[];
+    total_hours: number;
+    max_hours: number;
+    tasks_completed: number;
+    total_tasks: number;
+    course_hours: CourseHours[]; // Match backend snake_case
+    /////// BU DATABASE'e Eklenmeli mi
+  }
 
+  interface LeaveRequest {
+    id: number;
+    start_date: string;
+    end_date: string;
+    reason: string;
+    status: "pending" | "approved" | "rejected";
+  }
+
+  interface Duty {
+    //Duty yerine Task olacak büyük ihtimal
+    id: number;
+    date: string;
+    course_code: string;
+    type: string;
+    duration: string;
+    status?: string;
+  }
+
+  interface CourseHours {
+    course_code: string;
+    course_name: string;
+    hours: number;
+  }
+
+  const apiClient = axios.create({
+    baseURL: "http://localhost:5001/api",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  const [userData, setUserData] = useState<User | null>(null);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [duties, setDuties] = useState<{
+    upcoming: Duty[];
+    completed: Duty[];
+  }>({ upcoming: [], completed: [] });
+  const [courseHours, setCourseHours] = useState<CourseHours[]>([]);
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">(
     "upcoming"
   );
@@ -90,22 +85,65 @@ const TAProfilePage: React.FC = () => {
   const [activeSemester, setActiveSemester] = useState<
     "this-semester" | "previous"
   >("this-semester");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    //document.body.style.paddingTop = "80px";
-      // Reset body styles and scroll on mount
-      document.body.style.paddingTop = "80px";
-      document.querySelector(".navbar-collapse")?.classList.remove("show");
-      document.body.style.paddingTop = "0";
-      document.body.style.margin = "0";
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [userRes, leaveRes, dutiesRes, hoursRes] = await Promise.all([
+          apiClient.get<User>("/users/me"),
+          apiClient.get<LeaveRequest[]>("/leave-requests"),
+          apiClient.get<{ upcoming: Duty[]; completed: Duty[] }>(
+            `/duties?semester=${activeSemester}`
+          ),
+          apiClient.get<CourseHours[]>("/course-hours"),
+        ]);
 
-  // Clean up any lingering Bootstrap collapse classes
-  const navCollapse = document.querySelector(".navbar-collapse");
-  if (navCollapse && navCollapse.classList.contains("show")) {
-    navCollapse.classList.remove("show");
-  }
-    
-  }, []);
+        setUserData(userRes.data);
+        setLeaveRequests(leaveRes.data);
+        setDuties(dutiesRes.data);
+        setCourseHours(hoursRes.data);
+        setError(null);
+      } catch (err) {
+        setError(
+          axios.isAxiosError(err)
+            ? err.response?.data?.message || "Failed to load data"
+            : "An unexpected error occurred"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    //document.body.style.paddingTop = "80px";
+    // Reset body styles and scroll on mount
+    document.body.style.paddingTop = "80px";
+    document.querySelector(".navbar-collapse")?.classList.remove("show");
+    document.body.style.paddingTop = "0";
+    document.body.style.margin = "0";
+
+    // Clean up any lingering Bootstrap collapse classes
+    const navCollapse = document.querySelector(".navbar-collapse");
+    if (navCollapse && navCollapse.classList.contains("show")) {
+      navCollapse.classList.remove("show");
+    }
+
+    const handleSemesterChange = (
+      semesterType: "this-semester" | "previous"
+    ) => {
+      setActiveSemester(semesterType);
+      // The useEffect will automatically refetch data
+
+      const handleLogout = () => {
+        localStorage.removeItem("token");
+        navigate("/login");
+      };
+    };
+  }, [activeSemester]);
 
   return (
     <>
@@ -244,7 +282,8 @@ const TAProfilePage: React.FC = () => {
                   role="button"
                   data-bs-toggle="dropdown"
                 >
-                  <i className="fas fa-user-circle"></i> Kamil Berkay Çetin
+                  <i className="fas fa-user-circle"></i>{" "}
+                  {userData?.full_name || "User"}
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end">
                   {/* <li>
@@ -272,23 +311,25 @@ const TAProfilePage: React.FC = () => {
             <div className="card text-center">
               <div className="card-body">
                 <img
-                  src={user.profileImage}
+                  src={
+                    userData?.profile_image || "https://via.placeholder.com/150"
+                  }
                   alt="Profile"
                   className="profile-avatar mb-3"
                 />
-                <h4>{user.fullName}</h4>
-                <p className="text-muted">{user.department}</p>
+                <h4>{userData?.full_name}</h4>
+                <p className="text-muted">{userData?.department}</p>
                 <p>
                   <i className="fas fa-id-card me-2"></i>
-                  {user.studentId}
+                  {userData?.student_id}
                 </p>
                 <p>
                   <i className="fas fa-envelope me-2"></i>
-                  {user.email}
+                  {userData?.email}
                 </p>
                 <p>
                   <i className="fas fa-phone me-2"></i>
-                  {user.phone}
+                  {userData?.phone}
                 </p>
                 <hr />
                 <div className="d-grid gap-2">
@@ -304,26 +345,26 @@ const TAProfilePage: React.FC = () => {
                 </div>
               </div>
             </div>
-
+            {/* Buraya user'a eklenecek skills variable'ından çekebiliriz}*/}
             <div className="card mt-4">
               <div className="card-header">
                 <h5 className="mb-0">Skills & Expertise</h5>
               </div>
               <div className="card-body">
                 <h6>Programming Languages</h6>
-                {user.skills.map((skill) => (
+                {userData?.skills.map((skill) => (
                   <span className="badge bg-primary me-1" key={skill}>
                     {skill}
                   </span>
                 ))}
                 <h6 className="mt-3">Courses Qualified For</h6>
-                {user.courses.map((course) => (
+                {userData?.courses.map((course) => (
                   <span className="badge bg-success me-1" key={course}>
                     {course}
                   </span>
                 ))}
                 <h6 className="mt-3">Special Qualifications</h6>
-                {user.qualifications.map((q) => (
+                {userData?.qualifications.map((q) => (
                   <span className="badge bg-info me-1" key={q}>
                     {q}
                   </span>
@@ -367,13 +408,17 @@ const TAProfilePage: React.FC = () => {
                   <div className="col-md-6 text-center">
                     <h6>Total Hours This Semester</h6>
                     <h2>
-                      {user.totalHours} / {user.maxHours}
+                      {userData?.total_hours} / {userData?.max_hours}
                     </h2>
                     <div className="progress">
                       <div
                         className="progress-bar bg-primary"
                         style={{
-                          width: `${(user.totalHours / user.maxHours) * 100}%`,
+                          width: `${
+                            ((userData?.total_hours || 0) /
+                              (userData?.max_hours || 1)) *
+                            100
+                          }%`,
                         }}
                       ></div>
                     </div>
@@ -381,27 +426,33 @@ const TAProfilePage: React.FC = () => {
                   <div className="col-md-6 text-center">
                     <h6>Tasks Completed</h6>
                     <h2>
-                      {user.tasksCompleted} / {user.totalTasks}
+                      {userData?.tasks_completed} / {userData?.total_tasks}
                     </h2>
                     <div className="progress">
                       <div
                         className="progress-bar bg-success"
                         style={{
                           width: `${
-                            (user.tasksCompleted / user.totalTasks) * 100
+                            ((userData?.tasks_completed || 0) /
+                              (userData?.total_tasks || 1)) *
+                            100
                           }%`,
                         }}
                       ></div>
                     </div>
                   </div>
                 </div>
-                {user.courseHours.map((c, idx) => (
+                {userData?.course_hours?.map((c, idx) => (
                   <div key={idx}>
-                    <h6>{c.course}</h6>
+                    <h6>
+                      {c.course_code} - {c.course_name}
+                    </h6>
                     <div className="progress mb-3">
                       <div
                         className="progress-bar bg-primary"
-                        style={{ width: `${(c.hours / 50) * 100}%` }}
+                        style={{
+                          width: `${(c.hours / userData.max_hours) * 100}%`,
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -433,16 +484,18 @@ const TAProfilePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {user.leaveRequests.map((req, idx) => (
-                      <tr key={idx}>
-                        <td>{req.start}</td>
-                        <td>{req.end}</td>
+                    {leaveRequests.map((req) => (
+                      <tr key={req.id}>
+                        <td>{new Date(req.start_date).toLocaleDateString()}</td>
+                        <td>{new Date(req.end_date).toLocaleDateString()}</td>
                         <td>{req.reason}</td>
                         <td>
                           <span
                             className={`badge ${
-                              req.status === "Approved"
+                              req.status === "approved"
                                 ? "bg-success"
+                                : req.status === "rejected"
+                                ? "bg-danger"
                                 : "bg-warning"
                             }`}
                           >
@@ -500,21 +553,24 @@ const TAProfilePage: React.FC = () => {
                   </thead>
                   <tbody>
                     {(activeTab === "upcoming"
-                      ? user.duties.upcoming
-                      : user.duties.completed
-                    ).map((duty, idx) => (
-                      <tr key={idx}>
-                        <td>{duty.date}</td>
-                        <td>{duty.course}</td>
-                        <td>{duty.type}</td>
-                        <td>{duty.duration}</td>
-                        {activeTab === "completed" && (
-                          <td>
-                            <span className="badge bg-success">Completed</span>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
+                      ? duties.upcoming /////////// user'ın task classları olmalı
+                      : duties.completed
+                    ) //////////////
+                      .map((duty) => (
+                        <tr key={duty.id}>
+                          <td>{new Date(duty.date).toLocaleDateString()}</td>
+                          <td>{duty.course_code}</td>
+                          <td>{duty.type}</td>
+                          <td>{duty.duration}</td>
+                          {activeTab === "completed" && (
+                            <td>
+                              <span className="badge bg-success">
+                                Completed
+                              </span>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

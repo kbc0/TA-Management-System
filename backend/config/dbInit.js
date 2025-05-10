@@ -50,7 +50,7 @@ const createTablesQueries = {
 };
 
 /**
- * Initialize database tables
+ * Initialize database tables for backend
  */
 async function initDatabase() {
   try {
