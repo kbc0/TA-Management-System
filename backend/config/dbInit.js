@@ -1,5 +1,8 @@
 // backend/config/dbInit.js
 const pool = require('./db');
+const xlsx = require('xlsx');
+const User = require('../models/User');
+const path = require('path');
 
 // SQL statements to create tables if they don't exist
 const createTablesQueries = {
@@ -184,6 +187,63 @@ const createTablesQueries = {
 };
 
 /**
+ * Import users from Excel file
+ * @param {string} filePath - Path to the Excel file
+ */
+async function importUsersFromExcel(filePath) {
+  try {
+    console.log('Checking for sample users to import...');
+    
+    // Check if file exists
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) {
+      console.log('No sample data file found. Skipping user import.');
+      return;
+    }
+    
+    const workbook = xlsx.readFile(filePath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(sheet);
+    
+    console.log(`Found ${rows.length} users in sample data file.`);
+    let inserted = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (const row of rows) {
+      const bilkentId = row.student_id.toString();
+      const email = `${bilkentId}@ug.bilkent.edu.tr`;
+      const fullName = `TA ${bilkentId}`;
+      const password = bilkentId; // default password (can be changed later)
+
+      try {
+        const existingUser = await User.findByBilkentId(bilkentId);
+        if (!existingUser) {
+          await User.create({
+            bilkent_id: bilkentId,
+            email,
+            password,
+            full_name: fullName,
+            role: "ta",
+          });
+          inserted++;
+        } else {
+          skipped++;
+        }
+      } catch (error) {
+        console.error(`Error inserting user ${bilkentId}:`, error.message);
+        errors++;
+      }
+    }
+
+    console.log(`User import summary: ${inserted} inserted, ${skipped} skipped, ${errors} errors`);
+  } catch (err) {
+    console.error('Failed to import users:', err);
+    // Don't throw error to allow the rest of the initialization to continue
+  }
+}
+
+/**
  * Initialize database tables
  */
 async function initDatabase() {
@@ -197,10 +257,14 @@ async function initDatabase() {
     }
     
     console.log('Database initialization completed successfully');
+    
+    // Import sample users from Excel file
+    const excelPath = path.join(__dirname, '../ta_management_sample_input.xlsx');
+    await importUsersFromExcel(excelPath);
   } catch (error) {
     console.error('Database initialization error:', error);
     throw error;
   }
 }
 
-module.exports = { initDatabase };
+module.exports = { initDatabase, importUsersFromExcel };
