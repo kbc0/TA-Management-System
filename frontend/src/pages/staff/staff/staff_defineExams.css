@@ -1,0 +1,230 @@
+/* App.css */
+.define-exams-container {
+    background: linear-gradient(135deg, #0f4c81, #3a78c3);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Header Styles */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+  /* Logo */
+  .login-logo {
+    width: 290px;
+    height: 250px;
+    margin-bottom: 10px;
+  }
+
+.page-header h1 {
+  font-size: 28px;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Button Styles */
+.btn-primary, .btn-outline, .btn-small, .btn-block {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.btn-outline {
+  background-color: white;
+  border: 1px solid #3498db;
+  color: #3498db;
+}
+
+.btn-outline:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  text-align: left;
+  padding: 10px 15px;
+}
+
+/* Exam List Styles */
+.exam-list-section h2 {
+  font-size: 22px;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.exam-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.exam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.exam-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge.pending {
+  background-color: #f39c12;
+  color: white;
+}
+
+.badge.assigned {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.exam-card p {
+  margin: 8px 0;
+  color: #555;
+}
+
+.exam-actions {
+  margin-top: 15px;
+}
+
+/* Statistics Section */
+.exam-stats-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  
+}
+
+.card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.stats-group {
+  margin-bottom: 20px;
+}
+
+.stats-group strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.stats-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stats-group li {
+  padding: 6px 0;
+}
+
+.badge.blue {
+  background-color: #3498db;
+  color: white;
+}
+
+.badge.yellow {
+  background-color: #f1c40f;
+  color: #333;
+}
+
+.badge.green {
+  background-color: #2ecc71;
+  color: white;
+}
+
+/* Bar Chart Styles */
+.bar {
+  height: 24px;
+  background: #ecf0f1;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+.bar-fill {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.bar-fill.green {
+  background-color: #2ecc71;
+}
+
+.bar-fill.yellow {
+  background-color: #f39c12;
+}
+
+/* Quick Actions */
+.quick-actions {
+  margin-top: 15px;
+}
