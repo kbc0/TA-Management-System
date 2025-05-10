@@ -1,4 +1,4 @@
-// backend/models/Task.js
+// models/Task.js
 const db = require('../config/db');
 
 class Task {
@@ -82,14 +82,64 @@ class Task {
     }
   }
 
+  static async getTasksForCourse(courseId) {
+    try {
+      // Handle both numeric and string course IDs
+      const isNumeric = !isNaN(courseId);
+      
+      let query;
+      if (isNumeric) {
+        // Use course.id for D1 style
+        query = `
+          SELECT t.*, u.full_name as assigned_to_name
+          FROM tasks t
+          LEFT JOIN task_assignments ta ON t.id = ta.task_id
+          LEFT JOIN users u ON u.id = ta.user_id
+          JOIN courses c ON c.id = ?
+          WHERE t.course_id = c.course_code
+          ORDER BY t.due_date ASC
+        `;
+      } else {
+        // Use direct course_id for D2 style
+        query = `
+          SELECT t.*, u.full_name as assigned_to_name
+          FROM tasks t
+          LEFT JOIN task_assignments ta ON t.id = ta.task_id
+          LEFT JOIN users u ON u.id = ta.user_id
+          WHERE t.course_id = ?
+          ORDER BY t.due_date ASC
+        `;
+      }
+      
+      const [rows] = await db.query(query, [courseId]);
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async create(taskData) {
     try {
       const { title, description, task_type, course_id, due_date, duration, created_by } = taskData;
       
+      // Check if course_id is a numeric ID or course code
+      let actualCourseId = course_id;
+      if (course_id && !isNaN(course_id)) {
+        // If numeric, look up the course code
+        const [courseResult] = await db.query(
+          'SELECT course_code FROM courses WHERE id = ?',
+          [course_id]
+        );
+        
+        if (courseResult.length > 0) {
+          actualCourseId = courseResult[0].course_code;
+        }
+      }
+      
       const [result] = await db.query(
         `INSERT INTO tasks (title, description, task_type, course_id, due_date, duration, status, created_by)
         VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
-        [title, description, task_type, course_id, due_date, duration, created_by]
+        [title, description, task_type, actualCourseId, due_date, duration, created_by]
       );
       
       const taskId = result.insertId;
@@ -121,26 +171,36 @@ class Task {
 
       for (const field of allowedFields) {
         if (taskData.hasOwnProperty(field)) {
-          updates[field] = taskData[field];
+          // Special handling for course_id
+          if (field === 'course_id' && !isNaN(taskData[field])) {
+            // Convert numeric course_id to course_code
+            const [courseResult] = await db.query(
+              'SELECT course_code FROM courses WHERE id = ?',
+              [taskData[field]]
+            );
+            
+            if (courseResult.length > 0) {
+              updates[field] = courseResult[0].course_code;
+            } else {
+              updates[field] = taskData[field];
+            }
+          } else {
+            updates[field] = taskData[field];
+          }
+          
           if (setClause !== '') setClause += ', ';
           setClause += `${field} = ?`;
-          queryParams.push(taskData[field]);
+          queryParams.push(updates[field]);
         }
       }
 
       // Always update the updated_at timestamp
       if (setClause !== '') setClause += ', ';
       setClause += 'updated_at = CURRENT_TIMESTAMP';
-      // No need to add CURRENT_TIMESTAMP to queryParams, SQL handles it
-
-      if (queryParams.length === 0 && setClause.includes('updated_at')) {
-        // Only updating updated_at, no other fields changed
-        // Or if queryParams is empty (no valid fields were in taskData to update)
-        // We must ensure at least one field is being set if we proceed
-      } else if (queryParams.length === 0) {
-         // No valid fields to update, and not even updated_at was added somehow (should not happen with logic above)
+      
+      if (queryParams.length === 0) {
         console.log('[Task.update] No fields to update for task:', taskId);
-        return false; // Or throw an error: new Error('No valid fields provided for update');
+        return false;
       }
       
       queryParams.push(taskId); // Add taskId for the WHERE clause

@@ -1,5 +1,6 @@
-// backend/middleware/validationMiddleware.js
+// middleware/validationMiddleware.js
 const { body, validationResult } = require('express-validator');
+const { PERMISSIONS } = require('../config/roles');
 
 /**
  * Custom middleware to validate request based on rules
@@ -29,6 +30,47 @@ exports.validate = (validations) => {
       errors: formattedErrors
     });
   };
+};
+
+/**
+ * Combines validation with permission checking
+ * @param {Array} validations - Validation rules
+ * @param {string} requiredPermission - Permission required
+ * @returns {Array} Array of middleware functions
+ */
+exports.validateAndCheckPermission = (validations, requiredPermission) => {
+  return [
+    // First run validation
+    exports.validate(validations),
+    // Then check permission
+    (req, res, next) => {
+      if (!req.user || !req.user.permissions.includes(requiredPermission)) {
+        return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+      }
+      next();
+    }
+  ];
+};
+
+// Parameter normalization middleware
+exports.normalizeParams = (req, res, next) => {
+  // Normalize common camelCase/snake_case parameter pairs
+  const normalizations = [
+    { camel: 'bilkentId', snake: 'bilkent_id' },
+    { camel: 'fullName', snake: 'full_name' },
+    { camel: 'newPassword', snake: 'new_password' }
+  ];
+  
+  normalizations.forEach(({ camel, snake }) => {
+    // If both are provided, prefer camelCase (but keep both for backward compatibility)
+    if (req.body[camel] !== undefined && req.body[snake] === undefined) {
+      req.body[snake] = req.body[camel];
+    } else if (req.body[snake] !== undefined && req.body[camel] === undefined) {
+      req.body[camel] = req.body[snake];
+    }
+  });
+  
+  next();
 };
 
 // Validation rules for authentication
@@ -100,25 +142,4 @@ exports.authValidation = {
       .isString().withMessage('New password must be a string')
       .isLength({ min: 6 }).withMessage('New password must be at least 6 characters long')
   ]
-};
-
-// Parameter normalization middleware
-exports.normalizeParams = (req, res, next) => {
-  // Normalize common camelCase/snake_case parameter pairs
-  const normalizations = [
-    { camel: 'bilkentId', snake: 'bilkent_id' },
-    { camel: 'fullName', snake: 'full_name' },
-    { camel: 'newPassword', snake: 'new_password' }
-  ];
-  
-  normalizations.forEach(({ camel, snake }) => {
-    // If both are provided, prefer camelCase (but keep both for backward compatibility)
-    if (req.body[camel] !== undefined && req.body[snake] === undefined) {
-      req.body[snake] = req.body[camel];
-    } else if (req.body[snake] !== undefined && req.body[camel] === undefined) {
-      req.body[camel] = req.body[snake];
-    }
-  });
-  
-  next();
 };
