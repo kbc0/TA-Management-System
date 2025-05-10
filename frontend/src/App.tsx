@@ -9,7 +9,7 @@ import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import HomePageForTA from "./pages/auth/HomePageForTA";
+import HomePageForTA from "./pages/ta/HomePageForTA";
 
 // Dashboard Pages
 import TADashboard from './pages/ta/Dashboard';
