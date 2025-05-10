@@ -4,12 +4,13 @@
  * This file centralizes all role-based access control configuration
  */
 
-// Define all possible roles in the system
+// Define all possible roles in the system (with consistent naming)
 const ROLES = {
-  TEACHING_ASSISTANT: 'teaching_assistant',
-  INSTRUCTOR: 'instructor',
+  TEACHING_ASSISTANT: 'ta',
+  INSTRUCTOR: 'staff',
   ADMIN: 'admin',
-  DEPARTMENT_CHAIR: 'department_chair'
+  DEPARTMENT_CHAIR: 'department_chair',
+  DEAN: 'dean'
 };
 
 // Define all possible permissions in the system
@@ -116,6 +117,16 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_APPLICATIONS,
     PERMISSIONS.APPROVE_APPLICATION,
     PERMISSIONS.REJECT_APPLICATION,
+    PERMISSIONS.VIEW_ASSIGNMENTS,
+    PERMISSIONS.VIEW_EVALUATIONS,
+    PERMISSIONS.VIEW_AUDIT_LOGS
+  ],
+  
+  // Dean permissions (added for completeness)
+  [ROLES.DEAN]: [
+    PERMISSIONS.VIEW_USERS,
+    PERMISSIONS.VIEW_COURSES,
+    PERMISSIONS.VIEW_APPLICATIONS,
     PERMISSIONS.VIEW_ASSIGNMENTS,
     PERMISSIONS.VIEW_EVALUATIONS,
     PERMISSIONS.VIEW_AUDIT_LOGS
