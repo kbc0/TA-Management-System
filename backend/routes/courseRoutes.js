@@ -13,12 +13,12 @@ const {
   getCourseTAs,
   getTACourses
 } = require('../controllers/courseController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/permissionMiddleware');
 const { PERMISSIONS } = require('../config/roles');
 
 // All course routes require authentication
-router.use(authenticate);
+router.use(protect);
 
 // Course management routes
 router.get('/', getCourses);

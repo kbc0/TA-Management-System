@@ -27,6 +27,7 @@ const Navigation: React.FC = () => {
     { path: '/initiate-swap', label: 'Initiate Swap', roles: ['ta'] },
     { path: '/my-swap-requests', label: 'My Swap Requests', roles: ['ta'] },
     { path: '/leave-statistics', label: 'Leave Statistics', roles: ['ta', 'staff', 'department_chair', 'admin', 'dean'] },
+    { path: '/admin/audit-logs', label: 'System Logs', roles: ['admin'] },
     { path: '/profile', label: 'Profile', roles: ['ta', 'staff', 'department_chair', 'admin', 'dean'] },
   ];
 

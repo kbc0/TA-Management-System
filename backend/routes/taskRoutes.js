@@ -16,6 +16,7 @@ router.get('/upcoming', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskCon
 router.get('/:id', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskController.getTaskById);
 router.post('/', requirePermission(PERMISSIONS.CREATE_ASSIGNMENT), taskController.createTask);
 router.put('/:id', requirePermission(PERMISSIONS.UPDATE_ASSIGNMENT), taskController.updateTask);
+router.put('/:id/complete', requirePermission(PERMISSIONS.UPDATE_ASSIGNMENT), taskController.completeTask);
 router.delete('/:id', requirePermission(PERMISSIONS.DELETE_ASSIGNMENT), taskController.deleteTask);
 
 module.exports = router;

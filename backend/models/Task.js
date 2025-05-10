@@ -255,6 +255,19 @@ class Task {
         return { success: false, message: 'Task not found' };
       }
       
+      // Allow admins to complete any task
+      if (userRole === 'admin') {
+        const [result] = await db.query(
+          'UPDATE tasks SET status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [taskId]
+        );
+        
+        return { 
+          success: result.affectedRows > 0, 
+          message: result.affectedRows > 0 ? 'Task marked as completed by admin' : 'Failed to update task'
+        };
+      }
+      
       // Allow task creator (instructors/staff) to complete the task
       if ((userRole === 'staff' || userRole === 'department_chair') && task.created_by === userId) {
         const [result] = await db.query(

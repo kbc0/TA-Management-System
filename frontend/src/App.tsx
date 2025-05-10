@@ -24,6 +24,11 @@ import TaskDetail from './components/tasks/TaskDetail';
 import TaskForm from './components/tasks/TaskForm';
 import SwapEligibleTargets from './components/swap/SwapEligibleTargets';
 
+// Admin Pages
+import UserCreatePage from './pages/admin/UserCreatePage';
+import CourseCreatePage from './pages/admin/CourseCreatePage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+
 // Import new components
 import LeaveApprovalDashboard from './components/leave/LeaveApprovalDashboard';
 import LeaveStatisticsDashboard from './components/leave/LeaveStatisticsDashboard';
@@ -241,6 +246,13 @@ const App: React.FC = () => {
               {/* Reports Routes - Adding 'dean' */}
               <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin', 'dean']} />}>
                 <Route path="/reports/users" element={<UserReportDashboard />} />
+              </Route>
+
+              {/* Admin Management Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/admin/users/create" element={<UserCreatePage />} />
+                <Route path="/admin/courses/create" element={<CourseCreatePage />} />
+                <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
               </Route>
 
               {/* Exam Management Routes */}

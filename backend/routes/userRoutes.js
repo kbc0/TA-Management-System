@@ -1,7 +1,7 @@
 // backend/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
-const { getUsers, getUserById, updateUserRole, deactivateUser } = require('../controllers/userController');
+const { getUsers, getUserById, updateUserRole, deactivateUser, createUser } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/permissionMiddleware');
 const { PERMISSIONS } = require('../config/roles');
@@ -11,6 +11,9 @@ router.use(protect);
 
 // Get all users - requires VIEW_USERS permission
 router.get('/', requirePermission(PERMISSIONS.VIEW_USERS), getUsers);
+
+// Create new user - requires CREATE_USER permission
+router.post('/', requirePermission(PERMISSIONS.CREATE_USER), createUser);
 
 // Get user by ID - requires VIEW_USERS permission
 router.get('/:id', requirePermission(PERMISSIONS.VIEW_USERS), getUserById);

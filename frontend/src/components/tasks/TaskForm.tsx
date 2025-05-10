@@ -62,11 +62,42 @@ const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
     };
 
     const fetchAvailableTAs = async () => {
-      setAvailableAssignees([
-        { id: 1, fullName: 'John Doe' },
-        { id: 2, fullName: 'Jane Smith' },
-        { id: 3, fullName: 'Robert Johnson' },
-      ]);
+      try {
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+
+        // Fetch TAs from the API
+        const response = await fetch('http://localhost:5001/api/users?role=ta', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch teaching assistants');
+        }
+
+        const data = await response.json();
+        
+        if (data && Array.isArray(data.users)) {
+          // Map the API response to the format expected by the component
+          const formattedUsers = data.users.map((user: any) => ({
+            id: user.id,
+            fullName: user.full_name || user.bilkent_id
+          }));
+          setAvailableAssignees(formattedUsers);
+        } else {
+          // Fallback to empty array if no users found
+          setAvailableAssignees([]);
+        }
+      } catch (error) {
+        console.error('Error fetching teaching assistants:', error);
+        // Provide empty array as fallback
+        setAvailableAssignees([]);
+      }
     };
 
     if (mode === 'edit') fetchTaskDetails(); // Only fetch task details if editing
