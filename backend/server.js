@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
+const runAllImports = require("./scripts/index");
 const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const courseRoutes = require('./routes/courseRoutes');
@@ -49,12 +50,16 @@ db.getConnection()
     } catch (error) {
       console.error('Failed to initialize audit logs:', error);
     }
-    // Initialize database tables
+
+// Initialize database tables and run import scripts
     try {
       await initDatabase();
+      await runAllImports(); 
+      console.log('✅ Data import completed at server startup');
     } catch (error) {
-      console.error('Failed to initialize database tables:', error);
+      console.error('Failed during DB init or data import:', error);
     }
+
   })
   .catch(err => {
     console.error('Database connection failed:', err);
@@ -94,4 +99,11 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+<<<<<<< Updated upstream
 });
+=======
+});
+
+
+
+>>>>>>> Stashed changes
