@@ -1,3 +1,4 @@
+// backend/controllers/authController.js
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { jwtSecret, jwtExpiresIn } = require('../config/auth');
@@ -38,15 +39,79 @@ if (process.env.NODE_ENV === 'development' || !process.env.MAIL_HOST) {
   });
 }
 
+/**
+ * Validates request parameters and returns missing or invalid fields
+ * @param {Object} params - The parameters to validate
+ * @param {Array} required - List of required field names
+ * @returns {Object} - Object containing validation results
+ */
+const validateParams = (params, required) => {
+  const missingFields = [];
+  const errors = {};
+  
+  // Check for missing required fields
+  required.forEach(field => {
+    if (!params[field] && params[field] !== 0) {
+      missingFields.push(field);
+    }
+  });
+  
+  // Email format validation (if email is provided)
+  if (params.email && !params.email.endsWith('@bilkent.edu.tr')) {
+    errors.email = 'Must use a Bilkent email address ending with @bilkent.edu.tr';
+  }
+  
+  // Password strength validation (if password is provided)
+  if (params.password && params.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters long';
+  }
+  
+  return {
+    isValid: missingFields.length === 0 && Object.keys(errors).length === 0,
+    missingFields,
+    errors
+  };
+};
+
+/**
+ * Register a new user
+ * @route POST /api/auth/signup
+ * @param {string} bilkentId - User's Bilkent ID
+ * @param {string} email - User's email (must be @bilkent.edu.tr)
+ * @param {string} fullName - User's full name
+ * @param {string} password - User's password (min 6 characters)
+ * @param {string} [role] - User's role (defaults to 'ta')
+ */
 exports.signup = async (req, res) => {
   try {
-    const { bilkentId, email, fullName, password, role } = req.body;
+    // Normalize parameters - accept both camelCase and snake_case
+    const bilkentId = req.body.bilkentId || req.body.bilkent_id;
+    const email = req.body.email;
+    const fullName = req.body.fullName || req.body.full_name;
+    const password = req.body.password;
+    const role = req.body.role;
 
     // Validate input
-    if (!bilkentId || !email || !fullName || !password) {
-      return res.status(400).json({ 
-        message: 'Bilkent ID, email, full name, and password are required' 
-      });
+    const validation = validateParams(
+      { bilkentId, email, fullName, password },
+      ['bilkentId', 'email', 'fullName', 'password']
+    );
+
+    if (!validation.isValid) {
+      const errorResponse = {
+        message: 'Validation failed',
+        details: {}
+      };
+      
+      if (validation.missingFields.length > 0) {
+        errorResponse.details.missingFields = validation.missingFields;
+      }
+      
+      if (Object.keys(validation.errors).length > 0) {
+        errorResponse.details.errors = validation.errors;
+      }
+      
+      return res.status(400).json(errorResponse);
     }
 
     // Check if user already exists
@@ -60,15 +125,15 @@ exports.signup = async (req, res) => {
     if (emailExists) {
       return res.status(409).json({ message: 'Email is already in use' });
     }
-    
-    // Validate Bilkent email domain if needed
-    if (!email.endsWith('@bilkent.edu.tr')) {
-      return res.status(400).json({ message: 'Please use your Bilkent email address' });
-    }
 
     // Validate role using our role configuration
     if (role && !isValidRole(role)) {
-      return res.status(400).json({ message: 'Invalid role specified' });
+      // Get the list of valid roles for better error reporting
+      const validRoles = Object.values(ROLES);
+      return res.status(400).json({ 
+        message: 'Invalid role specified',
+        validRoles
+      });
     }
 
     // Create new user
@@ -129,17 +194,44 @@ exports.signup = async (req, res) => {
       req
     );
     
-    res.status(500).json({ message: 'Server error during signup' });
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during signup' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
   }
 };
 
+/**
+ * Log in a user
+ * @route POST /api/auth/login
+ * @param {string} bilkentId - User's Bilkent ID
+ * @param {string} password - User's password
+ */
 exports.login = async (req, res) => {
   try {
-    const { bilkentId, password } = req.body;
+    // Normalize parameters - accept both camelCase and snake_case
+    const bilkentId = req.body.bilkentId || req.body.bilkent_id;
+    const password = req.body.password;
 
     // Validate input
-    if (!bilkentId || !password) {
-      return res.status(400).json({ message: 'ID and password are required' });
+    const validation = validateParams(
+      { bilkentId, password },
+      ['bilkentId', 'password']
+    );
+
+    if (!validation.isValid) {
+      const errorResponse = {
+        message: 'Validation failed',
+        details: {}
+      };
+      
+      if (validation.missingFields.length > 0) {
+        errorResponse.details.missingFields = validation.missingFields;
+      }
+      
+      return res.status(400).json(errorResponse);
     }
 
     // Find user by BilkentID
@@ -204,13 +296,40 @@ exports.login = async (req, res) => {
       req
     );
     
-    res.status(500).json({ message: 'Server error during login' });
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during login' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
   }
 };
 
+/**
+ * Send password recovery email
+ * @route POST /api/auth/recover-password
+ * @param {string} bilkentId - User's Bilkent ID
+ */
 exports.recoverPassword = async (req, res) => {
   try {
-    const { bilkentId } = req.body;
+    // Normalize parameters
+    const bilkentId = req.body.bilkentId || req.body.bilkent_id;
+
+    // Validate input
+    const validation = validateParams({ bilkentId }, ['bilkentId']);
+    
+    if (!validation.isValid) {
+      const errorResponse = {
+        message: 'Validation failed',
+        details: {}
+      };
+      
+      if (validation.missingFields.length > 0) {
+        errorResponse.details.missingFields = validation.missingFields;
+      }
+      
+      return res.status(400).json(errorResponse);
+    }
 
     // Find user by BilkentID
     const user = await User.findByBilkentId(bilkentId);
@@ -228,7 +347,7 @@ exports.recoverPassword = async (req, res) => {
     };
 
     // Create reset URL
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}?id=${bilkentId}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}?id=${bilkentId}`;
 
     try {
       // Send email
@@ -236,7 +355,7 @@ exports.recoverPassword = async (req, res) => {
         to: user.email,
         subject: 'Password Reset for TA Management System',
         html: `
-          <p>Hello,</p>
+          <p>Hello ${user.full_name},</p>
           <p>You requested a password reset for the TA Management System.</p>
           <p>Please click the link below to reset your password:</p>
           <a href="${resetUrl}">Reset Password</a>
@@ -276,13 +395,51 @@ exports.recoverPassword = async (req, res) => {
       req
     );
     
-    res.status(500).json({ message: 'Server error during password recovery' });
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during password recovery' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
   }
 };
 
+/**
+ * Reset user password
+ * @route POST /api/auth/reset-password
+ * @param {string} token - Reset token
+ * @param {string} bilkentId - User's Bilkent ID
+ * @param {string} newPassword - New password
+ */
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, bilkentId, newPassword } = req.body;
+    // Normalize parameters
+    const token = req.body.token;
+    const bilkentId = req.body.bilkentId || req.body.bilkent_id;
+    const newPassword = req.body.newPassword || req.body.new_password;
+
+    // Validate input
+    const validation = validateParams(
+      { token, bilkentId, newPassword },
+      ['token', 'bilkentId', 'newPassword']
+    );
+    
+    if (!validation.isValid) {
+      const errorResponse = {
+        message: 'Validation failed',
+        details: {}
+      };
+      
+      if (validation.missingFields.length > 0) {
+        errorResponse.details.missingFields = validation.missingFields;
+      }
+      
+      if (Object.keys(validation.errors).length > 0) {
+        errorResponse.details.errors = validation.errors;
+      }
+      
+      return res.status(400).json(errorResponse);
+    }
 
     // Check if token exists and is valid
     if (!resetTokens[bilkentId] || 
@@ -325,10 +482,19 @@ exports.resetPassword = async (req, res) => {
       req
     );
     
-    res.status(500).json({ message: 'Server error during password reset' });
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during password reset' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
   }
 };
 
+/**
+ * Log out a user (client-side implementation)
+ * @route POST /api/auth/logout
+ */
 exports.logout = async (req, res) => {
   // JWT tokens are stateless, so we can't invalidate them on the server
   // The client should remove the token from storage
