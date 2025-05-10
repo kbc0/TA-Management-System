@@ -1,0 +1,150 @@
+/* src/components/leave/LeaveStatisticsDashboard.css */
+.chart-container {
+    height: 250px;
+    position: relative;
+  }
+  
+  .custom-task-header {
+    margin-top: 100px !important;
+    padding-top: 20px !important;
+  }
+  
+  .card {
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+  }
+  
+  .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+    padding: 1.2rem 1.5rem 1rem;
+  }
+  
+  .card-header .card-title {
+    margin-bottom: 0.5rem !important;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+  }
+  
+  .card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid rgba(0,0,0,0.125);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.75em;
+  }
+  
+  .badge.bg-success {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+  }
+  
+  .badge.bg-warning {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+  }
+  
+  .badge.bg-danger {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+  }
+  
+  .list-group-item {
+    padding: 1rem;
+    border-left: none;
+    border-right: none;
+    transition: background-color 0.2s;
+  }
+  
+  .list-group-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .resolve-conflict-btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    background-color: #0074e4;
+    border-color: #0074e4;
+  }
+  
+  .resolve-conflict-btn:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+  
+  .loading {
+    text-align: center;
+    margin: 40px 0;
+    color: #666;
+    padding: 20px;
+  }
+  
+  .error-message {
+    color: #e63946;
+    background-color: #f8d7da;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 20px 0;
+  }
+  
+  .no-data {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  
+  .statistics-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    height: 100%;
+  }
+  
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .stat-row:last-child {
+    border-bottom: none;
+  }
+  
+  .stat-label {
+    font-weight: 500;
+    color: #555;
+  }
+  
+  .stat-value {
+    font-weight: 600;
+    color: #0074e4;
+  }
+  
+  .chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+  }
+  
+  @media (max-width: 768px) {
+    .chart-container {
+      height: 200px;
+    }
+  }

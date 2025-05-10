@@ -126,10 +126,12 @@ exports.signup = async (req, res) => {
       return res.status(409).json({ message: 'Email is already in use' });
     }
 
+
     // Validate role using our role configuration
     if (role && !isValidRole(role)) {
       // Get the list of valid roles for better error reporting
       const validRoles = Object.values(ROLES);
+
       return res.status(400).json({ 
         message: 'Invalid role specified',
         validRoles
@@ -184,6 +186,7 @@ exports.signup = async (req, res) => {
     );
   } catch (error) {
     console.error('Signup error:', error);
+
     
     // Log the error
     await loggingService.logError(
@@ -286,6 +289,7 @@ exports.login = async (req, res) => {
     );
   } catch (error) {
     console.error('Login error:', error);
+
     
     // Log the error
     await loggingService.logError(
@@ -302,6 +306,7 @@ exports.login = async (req, res) => {
       errorResponse.error = error.message;
     }
     res.status(500).json(errorResponse);
+
   }
 };
 
@@ -385,6 +390,7 @@ exports.recoverPassword = async (req, res) => {
     }
   } catch (error) {
     console.error('Password recovery error:', error);
+
     
     // Log the error
     await loggingService.logError(
@@ -401,6 +407,7 @@ exports.recoverPassword = async (req, res) => {
       errorResponse.error = error.message;
     }
     res.status(500).json(errorResponse);
+
   }
 };
 
@@ -472,6 +479,7 @@ exports.resetPassword = async (req, res) => {
     }
   } catch (error) {
     console.error('Password reset error:', error);
+
     
     // Log the error
     await loggingService.logError(
@@ -488,6 +496,7 @@ exports.resetPassword = async (req, res) => {
       errorResponse.error = error.message;
     }
     res.status(500).json(errorResponse);
+
   }
 };
 
@@ -495,6 +504,7 @@ exports.resetPassword = async (req, res) => {
  * Log out a user (client-side implementation)
  * @route POST /api/auth/logout
  */
+
 exports.logout = async (req, res) => {
   // JWT tokens are stateless, so we can't invalidate them on the server
   // The client should remove the token from storage
@@ -510,4 +520,5 @@ exports.logout = async (req, res) => {
       req
     );
   }
+
 };

@@ -17,7 +17,7 @@ interface AuthContextType {
 }
 
 // Create a context with a default value
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
   login: () => {},
@@ -31,25 +31,48 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
 
-  // Check if user is already logged in
   useEffect(() => {
+    console.log('[AuthContext] useEffect: Checking localStorage...');
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
+    console.log('[AuthContext] localStorage token:', token);
+    console.log('[AuthContext] localStorage storedUser:', storedUser);
+
     if (token && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+        const parsedUser = JSON.parse(storedUser);
+        // Add a check to ensure parsedUser is a valid user object with an id
+        if (parsedUser && typeof parsedUser === 'object' && parsedUser.id) {
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+          console.log('[AuthContext] User authenticated from localStorage:', parsedUser);
+        } else {
+          // Invalid user object structure
+          console.log('[AuthContext] Invalid user data in localStorage. Clearing storage.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } catch (e) {
-        // If there's an error parsing the user data, log out
+        console.error('[AuthContext] Error parsing user data from localStorage:', e);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
       }
+    } else {
+      // Token or user not found in localStorage
+      console.log('[AuthContext] No token/user in localStorage. User not authenticated.');
+      setUser(null); // Ensure user is null if not authenticating from localStorage
+      setIsAuthenticated(false); // Ensure authenticated is false
     }
   }, []);
 
   // Login function
   const login = (token: string, userData: User) => {
+    console.log('[AuthContext] Logging in user:', userData);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
@@ -58,10 +81,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   // Logout function
   const logout = async () => {
+    console.log('[AuthContext] Logging out user...');
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        // Call the logout API
         await fetch('http://localhost:5001/api/auth/logout', {
           method: 'POST',
           headers: {
@@ -69,11 +92,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             'Content-Type': 'application/json',
           }
         });
+        console.log('[AuthContext] Logout API call successful (or no token).');
       }
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error('[AuthContext] Logout API error:', err);
     } finally {
-      // Clear local storage and state
+      console.log('[AuthContext] Clearing localStorage and resetting auth state.');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);

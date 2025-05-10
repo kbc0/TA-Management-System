@@ -1,0 +1,237 @@
+// backend/models/Task.js
+const db = require('../config/db');
+
+class Task {
+  static async findAll(userId = null, role = null) {
+    try {
+      // If userId is provided, return tasks assigned to that user (for TAs)
+      if (userId && role === 'ta') {
+        const [rows] = await db.query(
+          `SELECT t.*, u.full_name as assigned_to_name
+          FROM tasks t
+          JOIN task_assignments ta ON t.id = ta.task_id
+          JOIN users u ON u.id = ta.user_id
+          WHERE ta.user_id = ?
+          ORDER BY t.due_date ASC`,
+          [userId]
+        );
+        return rows;
+      }
+      
+      // If user is staff/instructor, return all tasks created by them
+      if (userId && (role === 'staff' || role === 'department_chair')) {
+        const [rows] = await db.query(
+          `SELECT t.*, u.full_name as assigned_to_name
+          FROM tasks t
+          LEFT JOIN task_assignments ta ON t.id = ta.task_id
+          LEFT JOIN users u ON u.id = ta.user_id
+          WHERE t.created_by = ?
+          ORDER BY t.due_date ASC`,
+          [userId]
+        );
+        return rows;
+      }
+      
+      // If no userId or admin role, return all tasks
+      const [rows] = await db.query(
+        `SELECT t.*, u.full_name as assigned_to_name, c.full_name as creator_name
+        FROM tasks t
+        LEFT JOIN task_assignments ta ON t.id = ta.task_id
+        LEFT JOIN users u ON u.id = ta.user_id
+        LEFT JOIN users c ON c.id = t.created_by
+        ORDER BY t.due_date ASC`
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findById(taskId) {
+    try {
+      const [rows] = await db.query(
+        `SELECT t.*, u.full_name as assigned_to_name, c.full_name as creator_name
+        FROM tasks t
+        LEFT JOIN task_assignments ta ON t.id = ta.task_id
+        LEFT JOIN users u ON u.id = ta.user_id
+        LEFT JOIN users c ON c.id = t.created_by
+        WHERE t.id = ?`,
+        [taskId]
+      );
+      return rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async findUpcoming(userId, limit = 5) {
+    try {
+      const [rows] = await db.query(
+        `SELECT t.*, u.full_name as assigned_to_name
+        FROM tasks t
+        JOIN task_assignments ta ON t.id = ta.task_id
+        JOIN users u ON u.id = ta.user_id
+        WHERE ta.user_id = ? AND t.status = 'active' AND t.due_date >= CURDATE()
+        ORDER BY t.due_date ASC
+        LIMIT ?`,
+        [userId, limit]
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async create(taskData) {
+    try {
+      const { title, description, task_type, course_id, due_date, duration, created_by } = taskData;
+      
+      const [result] = await db.query(
+        `INSERT INTO tasks (title, description, task_type, course_id, due_date, duration, status, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
+        [title, description, task_type, course_id, due_date, duration, created_by]
+      );
+      
+      const taskId = result.insertId;
+      
+      // If there are assignees, create task assignments
+      if (taskData.assignees && taskData.assignees.length > 0) {
+        for (const userId of taskData.assignees) {
+          await db.query(
+            `INSERT INTO task_assignments (task_id, user_id)
+            VALUES (?, ?)`,
+            [taskId, userId]
+          );
+        }
+      }
+      
+      return await this.findById(taskId);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async update(taskId, taskData) {
+    try {
+      // Fields allowed for direct update from taskData (excluding id, created_at, updated_at, etc.)
+      const allowedFields = ['title', 'description', 'task_type', 'course_id', 'due_date', 'duration', 'status'];
+      const updates = {};
+      const queryParams = [];
+      let setClause = '';
+
+      for (const field of allowedFields) {
+        if (taskData.hasOwnProperty(field)) {
+          updates[field] = taskData[field];
+          if (setClause !== '') setClause += ', ';
+          setClause += `${field} = ?`;
+          queryParams.push(taskData[field]);
+        }
+      }
+
+      // Always update the updated_at timestamp
+      if (setClause !== '') setClause += ', ';
+      setClause += 'updated_at = CURRENT_TIMESTAMP';
+      // No need to add CURRENT_TIMESTAMP to queryParams, SQL handles it
+
+      if (queryParams.length === 0 && setClause.includes('updated_at')) {
+        // Only updating updated_at, no other fields changed
+        // Or if queryParams is empty (no valid fields were in taskData to update)
+        // We must ensure at least one field is being set if we proceed
+      } else if (queryParams.length === 0) {
+         // No valid fields to update, and not even updated_at was added somehow (should not happen with logic above)
+        console.log('[Task.update] No fields to update for task:', taskId);
+        return false; // Or throw an error: new Error('No valid fields provided for update');
+      }
+      
+      queryParams.push(taskId); // Add taskId for the WHERE clause
+
+      const sql = `UPDATE tasks SET ${setClause} WHERE id = ?`;
+      
+      const [result] = await db.query(sql, queryParams);
+      
+      // Update task assignments if 'assignees' is provided
+      if (taskData.hasOwnProperty('assignees') && Array.isArray(taskData.assignees)) {
+        // Remove existing assignments
+        await db.query('DELETE FROM task_assignments WHERE task_id = ?', [taskId]);
+        
+        // Add new assignments (only if assignees array is not empty)
+        if (taskData.assignees.length > 0) {
+          for (const userId of taskData.assignees) {
+            await db.query(
+              `INSERT INTO task_assignments (task_id, user_id)
+              VALUES (?, ?)`,
+              [taskId, userId]
+            );
+          }
+        }
+      }
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('[Task.update] Error:', error);
+      throw error;
+    }
+  }
+
+  static async complete(taskId, userId, userRole) {
+    try {
+      // Get the task to check if the user is assigned to it or created it
+      const task = await this.findById(taskId);
+      if (!task) {
+        return { success: false, message: 'Task not found' };
+      }
+      
+      // Allow task creator (instructors/staff) to complete the task
+      if ((userRole === 'staff' || userRole === 'department_chair') && task.created_by === userId) {
+        const [result] = await db.query(
+          'UPDATE tasks SET status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [taskId]
+        );
+        
+        return { 
+          success: result.affectedRows > 0, 
+          message: result.affectedRows > 0 ? 'Task marked as completed' : 'Failed to update task'
+        };
+      }
+      
+      // For other users, check if they are assigned to this task
+      const [assignment] = await db.query(
+        'SELECT * FROM task_assignments WHERE task_id = ? AND user_id = ?',
+        [taskId, userId]
+      );
+      
+      if (assignment.length === 0) {
+        return { success: false, message: 'You are not assigned to this task' };
+      }
+      
+      // Update the task status to completed
+      const [result] = await db.query(
+        'UPDATE tasks SET status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [taskId]
+      );
+      
+      return { 
+        success: result.affectedRows > 0, 
+        message: result.affectedRows > 0 ? 'Task marked as completed' : 'Failed to update task'
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async delete(taskId) {
+    try {
+      // First delete task assignments
+      await db.query('DELETE FROM task_assignments WHERE task_id = ?', [taskId]);
+      
+      // Then delete the task
+      const [result] = await db.query('DELETE FROM tasks WHERE id = ?', [taskId]);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+module.exports = Task;
