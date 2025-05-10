@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
           navigate("/admin/dashboard");
           break;
         case 'ta':
-          navigate("/ta/dashboard");
+          navigate("/");
           break;
         case 'staff':
           navigate("/staff/dashboard");
@@ -60,7 +60,7 @@ const LoginPage: React.FC = () => {
           navigate("/dean/dashboard");
           break;
         default:
-          navigate("/dashboard");
+          navigate("/ta/home");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
