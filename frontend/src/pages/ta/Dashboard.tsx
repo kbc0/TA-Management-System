@@ -12,6 +12,10 @@ const TADashboard: React.FC = () => {
     navigate('/');
   };
 
+  const handleViewTasks = () => {
+    navigate('/tasks');
+  };
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>TA Dashboard</h1>
@@ -23,6 +27,20 @@ const TADashboard: React.FC = () => {
       <div style={{ marginTop: '20px' }}>
         <h2>My Tasks</h2>
         <p>No tasks available yet.</p>
+        <button 
+          onClick={handleViewTasks}
+          style={{
+            padding: '10px 15px',
+            backgroundColor: '#0074e4',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginTop: '10px'
+          }}
+        >
+          View All Tasks
+        </button>
       </div>
       
       <div style={{ marginTop: '20px' }}>

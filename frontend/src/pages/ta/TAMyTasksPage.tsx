@@ -17,7 +17,7 @@ interface Task {
 
 interface NewTaskForm {
   course: string;
-  taskType: "" | Task["type"]; // boş string ya da union’daki tipler
+  taskType: "" | Task["type"]; // boş string ya da union'daki tipler
   date: string;
   startTime: string;
   endTime: string;
@@ -28,6 +28,9 @@ interface NewTaskForm {
 interface CalendarEvent {
   date: number;
   events: string[];
+  isPrevMonth?: boolean;
+  isCurrentDay?: boolean;
+  isNextMonth?: boolean;
 }
 
 const TAMyTasksPage = () => {
@@ -38,7 +41,7 @@ const TAMyTasksPage = () => {
   const [activeMenu, setActiveMenu] = useState("tasks");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  // En üstteki useState’ler:
+  // En üstteki useState'ler:
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 

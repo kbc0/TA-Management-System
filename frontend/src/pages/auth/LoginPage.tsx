@@ -1,6 +1,7 @@
 // src/pages/auth/LoginPage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./LogInPage.css";
 
 const LoginPage: React.FC = () => {
@@ -10,6 +11,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (): Promise<void> => {
     // Reset errors
@@ -38,9 +40,8 @@ const LoginPage: React.FC = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store token and user info in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Use the context login function to update auth state (this also handles localStorage)
+      login(data.token, data.user);
 
       // Redirect based on user role
       switch (data.user.role) {
