@@ -25,20 +25,11 @@ const LoginPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // Call the backend API
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bilkentId: bilkentID, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      // Import the login function from the API
+      const { login: loginApi } = await import('../../api/auth');
+      
+      // Call the login API
+      const data = await loginApi({ bilkentId: bilkentID, password });
 
       // Use the context login function to update auth state (this also handles localStorage)
       login(data.token, data.user);

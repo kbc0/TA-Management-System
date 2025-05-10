@@ -36,26 +36,17 @@ const SignupPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // Call the backend API
-      const response = await fetch('http://localhost:5001/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bilkentId,
-          email,
-          fullName,
-          password,
-          role: 'ta' // Default role
-        }),
+      // Import the signup function from the API
+      const { signup: signupApi } = await import('../../api/auth');
+      
+      // Call the signup API
+      const data = await signupApi({
+        bilkentId,
+        email,
+        fullName,
+        password,
+        role: 'ta' // Default role
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Signup failed');
-      }
 
       // Store token and user info
       localStorage.setItem('token', data.token);

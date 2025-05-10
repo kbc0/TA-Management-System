@@ -1,5 +1,6 @@
 // src/components/swap/SwapEligibleTargets.tsx
 import React, { useState, useEffect } from 'react';
+import { EligibleSwapTarget } from '../../api/swaps';
 import './SwapEligibleTargets.css';
 
 interface EligibleTA {
@@ -34,52 +35,38 @@ const SwapEligibleTargets: React.FC<SwapEligibleTargetsProps> = ({
     
     const fetchEligibleTargets = async () => {
       try {
-        const token = localStorage.getItem('token');
+        // Import the API functions dynamically to avoid circular dependencies
+        const { getEligibleSwapTargets } = await import('../../api/swaps');
+        const { getTaskById } = await import('../../api/tasks');
         
-        if (!token) {
-          throw new Error('Authentication required');
-        }
+        // Fetch eligible targets using the API service
+        const eligibleTargets = await getEligibleSwapTargets(assignmentId, assignmentType);
         
-        // Fetch eligible targets
-        const response = await fetch(
-          `http://localhost:5001/api/swaps/eligible-targets/${assignmentId}/${assignmentType}`, 
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch eligible targets');
-        }
-
-        const data = await response.json();
         if (isMounted) {
-          setEligibleTAs(data);
+          // Transform the data to match our component's expected format
+          const formattedTAs: EligibleTA[] = eligibleTargets.map(target => ({
+            id: target.id,
+            full_name: target.fullName,
+            bilkent_id: target.bilkentId || '',
+            email: target.email || ''
+          }));
+          
+          setEligibleTAs(formattedTAs);
         }
         
-        // Fetch assignment details (task or exam)
-        const detailsUrl = assignmentType === 'task' 
-          ? `http://localhost:5001/api/tasks/${assignmentId}`
-          : `http://localhost:5001/api/exams/${assignmentId}`;
-          
-        const detailsResponse = await fetch(detailsUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (detailsResponse.ok) {
-          const detailsData = await detailsResponse.json();
-          if (isMounted) {
-            setAssignmentDetails(detailsData);
+        // Fetch assignment details
+        if (assignmentType === 'task') {
+          try {
+            const taskDetails = await getTaskById(assignmentId);
+            if (isMounted) {
+              setAssignmentDetails(taskDetails);
+            }
+          } catch (detailsError) {
+            console.error('Error fetching task details:', detailsError);
           }
+        } else {
+          // For exam type, we would need to implement the exam API service
+          console.log('Exam details fetching not yet implemented');
         }
         
         if (isMounted) {

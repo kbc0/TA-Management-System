@@ -1,5 +1,7 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { logout as logoutApi } from '../api/auth';
+import { apiRequest } from '../api/apiUtils';
 
 interface User {
   id: number;
@@ -7,21 +9,26 @@ interface User {
   email: string;
   fullName: string;
   role: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  loading: boolean;
   login: (token: string, user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshUserData: () => Promise<User | null>;
 }
 
 // Create a context with a default value
 export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
+  loading: true,
   login: () => {},
-  logout: () => {},
+  logout: async () => {},
+  refreshUserData: async () => null,
 });
 
 // Custom hook to use the auth context
@@ -30,44 +37,64 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Function to refresh user data from the backend
+  const refreshUserData = async () => {
+    try {
+      const userData = await apiRequest<User>('/users/me');
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return userData;
+    } catch (error) {
+      console.error('[AuthContext] Error refreshing user data:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    console.log('[AuthContext] useEffect: Checking localStorage...');
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    console.log('[AuthContext] localStorage token:', token);
-    console.log('[AuthContext] localStorage storedUser:', storedUser);
-
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        // Add a check to ensure parsedUser is a valid user object with an id
-        if (parsedUser && typeof parsedUser === 'object' && parsedUser.id) {
-          setUser(parsedUser);
-          setIsAuthenticated(true);
-          console.log('[AuthContext] User authenticated from localStorage:', parsedUser);
-        } else {
-          // Invalid user object structure
-          console.log('[AuthContext] Invalid user data in localStorage. Clearing storage.');
+    const initializeAuth = async () => {
+      console.log('[AuthContext] Initializing auth state...');
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (token) {
+        try {
+          // First try to parse the stored user
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && typeof parsedUser === 'object' && parsedUser.id) {
+              setUser(parsedUser);
+              setIsAuthenticated(true);
+            }
+          }
+          
+          // Then try to refresh user data from the backend
+          const freshUserData = await refreshUserData();
+          if (freshUserData) {
+            console.log('[AuthContext] User data refreshed from backend');
+          } else {
+            // If we couldn't refresh but had a valid stored user, we'll use that
+            console.log('[AuthContext] Using cached user data');
+          }
+        } catch (e) {
+          console.error('[AuthContext] Error during auth initialization:', e);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
           setIsAuthenticated(false);
         }
-      } catch (e) {
-        console.error('[AuthContext] Error parsing user data from localStorage:', e);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      } else {
+        // No token found
+        console.log('[AuthContext] No token found. User not authenticated.');
         setUser(null);
         setIsAuthenticated(false);
       }
-    } else {
-      // Token or user not found in localStorage
-      console.log('[AuthContext] No token/user in localStorage. User not authenticated.');
-      setUser(null); // Ensure user is null if not authenticating from localStorage
-      setIsAuthenticated(false); // Ensure authenticated is false
-    }
+      
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   // Login function
@@ -85,14 +112,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await fetch('http://localhost:5001/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }
-        });
-        console.log('[AuthContext] Logout API call successful (or no token).');
+        await logoutApi(token);
+        console.log('[AuthContext] Logout API call successful.');
       }
     } catch (err) {
       console.error('[AuthContext] Logout API error:', err);
@@ -106,7 +127,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      loading,
+      login, 
+      logout,
+      refreshUserData
+    }}>
       {children}
     </AuthContext.Provider>
   );

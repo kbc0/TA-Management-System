@@ -1,6 +1,30 @@
 import React from "react";
 import "./SwapRequestDetailsModal.css";
-import { SwapRequest } from "./types";
+import { SwapRequest as ApiSwapRequest } from "../../api/swaps";
+
+// Extended interface for the UI with additional properties
+interface SwapRequest extends ApiSwapRequest {
+  title: string;
+  yourTask: {
+    course: string;
+    task: string;
+    date: string;
+    time: string;
+    location: string;
+  };
+  proposedTask: {
+    course: string;
+    task: string;
+    date: string;
+    time: string;
+  };
+  reason: string;
+  timeline: {
+    sent: string;
+    taResponse: string;
+    instructorApproval: string;
+  };
+}
 
 interface SwapRequestDetailsModalProps {
   show: boolean;
