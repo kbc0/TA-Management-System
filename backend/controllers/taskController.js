@@ -1,16 +1,27 @@
-// backend/controllers/taskController.js
+// controllers/taskController.js
 const Task = require('../models/Task');
+const { PERMISSIONS } = require('../config/roles');
+const { handleError } = require('../utils/errorHandler');
 
+/**
+ * Get all tasks based on user role
+ * @route GET /api/tasks
+ * @access Private
+ */
 exports.getAllTasks = async (req, res) => {
   try {
     const tasks = await Task.findAll(req.user.id, req.user.role);
     res.json(tasks);
   } catch (error) {
-    console.error('Error fetching tasks:', error);
-    res.status(500).json({ message: 'Server error while fetching tasks' });
+    return handleError(error, 'task', req.user, 'Error fetching tasks', req, res);
   }
 };
 
+/**
+ * Get a specific task by ID
+ * @route GET /api/tasks/:id
+ * @access Private
+ */
 exports.getTaskById = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -21,26 +32,49 @@ exports.getTaskById = async (req, res) => {
     
     res.json(task);
   } catch (error) {
-    console.error('Error fetching task:', error);
-    res.status(500).json({ message: 'Server error while fetching task' });
+    return handleError(error, 'task', req.user, 'Error fetching task', req, res);
   }
 };
 
+/**
+ * Get upcoming tasks for the current user
+ * @route GET /api/tasks/upcoming
+ * @access Private
+ */
 exports.getUpcomingTasks = async (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit) : 5;
     const tasks = await Task.findUpcoming(req.user.id, limit);
     res.json(tasks);
   } catch (error) {
-    console.error('Error fetching upcoming tasks:', error);
-    res.status(500).json({ message: 'Server error while fetching upcoming tasks' });
+    return handleError(error, 'task', req.user, 'Error fetching upcoming tasks', req, res);
   }
 };
 
+/**
+ * Get tasks for a specific course
+ * @route GET /api/tasks/course/:courseId
+ * @access Private
+ */
+exports.getTasksByCourse = async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const tasks = await Task.getTasksForCourse(courseId);
+    res.json(tasks);
+  } catch (error) {
+    return handleError(error, 'task', req.user, 'Error fetching course tasks', req, res);
+  }
+};
+
+/**
+ * Create a new task
+ * @route POST /api/tasks
+ * @access Private (staff, department_chair, admin)
+ */
 exports.createTask = async (req, res) => {
   try {
     // Check if user has permission to create tasks
-    if (!['admin', 'staff', 'department_chair'].includes(req.user.role)) {
+    if (!req.user.permissions.includes(PERMISSIONS.CREATE_ASSIGNMENT)) {
       return res.status(403).json({ message: 'You do not have permission to create tasks' });
     }
     
@@ -60,11 +94,15 @@ exports.createTask = async (req, res) => {
     const newTask = await Task.create(taskData);
     res.status(201).json(newTask);
   } catch (error) {
-    console.error('Error creating task:', error);
-    res.status(500).json({ message: 'Server error while creating task' });
+    return handleError(error, 'task', req.user, 'Error creating task', req, res);
   }
 };
 
+/**
+ * Update an existing task
+ * @route PUT /api/tasks/:id
+ * @access Private (creator or admin)
+ */
 exports.updateTask = async (req, res) => {
   try {
     const taskId = req.params.id;
@@ -77,7 +115,10 @@ exports.updateTask = async (req, res) => {
     }
     
     // Check permissions - only creator or admin can update
-    if (task.created_by !== req.user.id && req.user.role !== 'admin') {
+    const canUpdate = req.user.permissions.includes(PERMISSIONS.UPDATE_ASSIGNMENT) && 
+                      (task.created_by === req.user.id || req.user.role === 'admin');
+    
+    if (!canUpdate) {
       return res.status(403).json({ message: 'You do not have permission to update this task' });
     }
     
@@ -90,11 +131,15 @@ exports.updateTask = async (req, res) => {
     const updatedTask = await Task.findById(taskId);
     res.json(updatedTask);
   } catch (error) {
-    console.error('Error updating task:', error);
-    res.status(500).json({ message: 'Server error while updating task' });
+    return handleError(error, 'task', req.user, 'Error updating task', req, res);
   }
 };
 
+/**
+ * Mark a task as completed
+ * @route PUT /api/tasks/:id/complete
+ * @access Private (assigned TA or creator)
+ */
 exports.completeTask = async (req, res) => {
   try {
     const taskId = req.params.id;
@@ -106,11 +151,15 @@ exports.completeTask = async (req, res) => {
     
     res.json({ message: result.message });
   } catch (error) {
-    console.error('Error completing task:', error);
-    res.status(500).json({ message: 'Server error while completing task' });
+    return handleError(error, 'task', req.user, 'Error completing task', req, res);
   }
 };
 
+/**
+ * Delete a task
+ * @route DELETE /api/tasks/:id
+ * @access Private (creator or admin)
+ */
 exports.deleteTask = async (req, res) => {
   try {
     const taskId = req.params.id;
@@ -123,7 +172,10 @@ exports.deleteTask = async (req, res) => {
     }
     
     // Check permissions - only creator or admin can delete
-    if (task.created_by !== req.user.id && req.user.role !== 'admin') {
+    const canDelete = req.user.permissions.includes(PERMISSIONS.DELETE_ASSIGNMENT) && 
+                      (task.created_by === req.user.id || req.user.role === 'admin');
+    
+    if (!canDelete) {
       return res.status(403).json({ message: 'You do not have permission to delete this task' });
     }
     
@@ -135,7 +187,6 @@ exports.deleteTask = async (req, res) => {
     
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
-    console.error('Error deleting task:', error);
-    res.status(500).json({ message: 'Server error while deleting task' });
+    return handleError(error, 'task', req.user, 'Error deleting task', req, res);
   }
 };
