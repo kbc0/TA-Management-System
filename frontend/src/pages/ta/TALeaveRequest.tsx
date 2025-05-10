@@ -1,13 +1,17 @@
-// LeaveRequestsPage.tsx
+// src/pages/ta/TALeaveRequest.tsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // En üste ekle
+import { useNavigate } from "react-router-dom";
 import { Pie } from "react-chartjs-2";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./TALeaveRequest.css";
 import { Chart, registerables } from "chart.js";
+import { LeaveRequest as LeaveRequestType, getMyLeaveRequests, createLeaveRequest, cancelLeaveRequest } from "../../api/leaves";
+import { handleApiError } from "../../api/apiUtils";
+import { useAuth } from "../../context/AuthContext";
 Chart.register(...registerables);
 
-interface LeaveRequest {
+// Interface for frontend display of leave requests
+interface LeaveRequestDisplay {
   id: number;
   reason: string;
   startDate: string;
@@ -30,9 +34,12 @@ interface ConflictTask {
 }
 
 const TALeaveRequest = () => {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequestDisplay[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   const [conflictTasks, setConflictTasks] = useState<ConflictTask[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequestDisplay | null>(
     null
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -42,12 +49,12 @@ const TALeaveRequest = () => {
     "all" | "pending" | "approved" | "rejected"
   >("all");
   const [showNewConfirmModal, setShowNewConfirmModal] = useState(false);
-  const navigate = useNavigate(); // Fonksiyon içinde tanımla
+  const navigate = useNavigate(); 
 
   // New Leave Request formu için
   interface NewLeaveForm {
     reason: string;
-    type: LeaveRequest["type"] | "";
+    type: LeaveRequestDisplay["type"] | "";
     startDate: string;
     endDate: string;
     details: string;
@@ -61,89 +68,106 @@ const TALeaveRequest = () => {
     details: "",
   });
 
-  // 🚀 API ENTEGRASYON NOKTASI - Veri çekme
+  // Fetch leave requests from the API
   useEffect(() => {
-    // Mock Leave Data
+    // Apply some UI fixes
     document.querySelector(".navbar-collapse")?.classList.remove("show");
     document.body.style.paddingTop = "0";
     document.body.style.margin = "0";
     document.documentElement.scrollTop = 0;
-    const mockLeaveData: LeaveRequest[] = [
-      {
-        id: 1,
-        reason: "Medical Leave",
-        startDate: "Mar 20, 2025",
-        endDate: "Mar 22, 2025",
-        duration: 3,
-        status: "pending",
-        type: "medical",
-        submittedDate: "Mar 16, 2025",
-        conflicts: [
-          {
-            id: 101,
-            title: "CS101 Lab Session",
-            date: "Mar 20, 2025",
-            time: "10:00 - 12:00",
-            conflictType: "pending",
-          },
-        ],
-      },
-      {
-        id: 2,
-        reason: "Conference Attendance - ICSE 2025",
-        startDate: "Apr 10, 2025",
-        endDate: "Apr 15, 2025",
-        duration: 6,
-        status: "approved",
-        type: "conference",
-        submittedDate: "Apr 1, 2025",
-        conflicts: [
-          {
-            id: 201,
-            title: "CS315 Midterm Proctoring",
-            date: "Apr 12, 2025",
-            time: "09:00 - 11:00",
-            conflictType: "approved",
-          },
-        ],
-      },
-    ];
-
-    // Mock Conflict Tasks
-    const mockConflictTasks: ConflictTask[] = [
-      {
-        id: 101,
-        title: "CS101 Lab Session",
-        date: "Mar 20, 2025",
-        time: "10:00 - 12:00",
-        conflictType: "pending",
-      },
-      {
-        id: 201,
-        title: "CS315 Midterm Proctoring",
-        date: "Apr 12, 2025",
-        time: "09:00 - 11:00",
-        conflictType: "approved",
-      },
-    ];
-
-    setLeaveRequests(mockLeaveData);
-    setConflictTasks(mockConflictTasks);
+    
+    const fetchLeaveRequests = async () => {
+      try {
+        setLoading(true);
+        const leaveData = await getMyLeaveRequests();
+        
+        // Transform the API data to match our display format
+        const transformedData: LeaveRequestDisplay[] = leaveData.map(leave => {
+          // Calculate duration in days
+          const startDate = new Date(leave.start_date);
+          const endDate = new Date(leave.end_date);
+          const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+          
+          // Determine leave type based on reason (simplified)
+          let leaveType: LeaveRequestDisplay["type"] = "other";
+          if (leave.reason.toLowerCase().includes("medical")) {
+            leaveType = "medical";
+          } else if (leave.reason.toLowerCase().includes("conference")) {
+            leaveType = "conference";
+          } else if (leave.reason.toLowerCase().includes("family")) {
+            leaveType = "family";
+          } else if (leave.reason.toLowerCase().includes("personal")) {
+            leaveType = "personal";
+          }
+          
+          return {
+            id: leave.id,
+            reason: leave.reason,
+            startDate: formatDateForDisplay(leave.start_date),
+            endDate: formatDateForDisplay(leave.end_date),
+            duration: diffDays,
+            status: leave.status as "pending" | "approved" | "rejected",
+            type: leaveType,
+            submittedDate: formatDateForDisplay(leave.created_at),
+            details: leave.reason, 
+            conflicts: [] 
+          };
+        });
+        
+        setLeaveRequests(transformedData);
+        setError(null);
+        
+        // For now, we'll use empty conflict tasks
+        // In a real implementation, you would fetch conflicts from the backend
+        setConflictTasks([]);
+      } catch (err) {
+        console.error("Error fetching leave requests:", err);
+        setError(handleApiError(err, "Failed to load leave requests"));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchLeaveRequests();
   }, []);
 
-  const handleDelete = (id: number) => {
-    setLeaveRequests((prev) => prev.filter((request) => request.id !== id));
-    setShowDeleteModal(false);
-    // 🚀 API DELETE çağrısı buraya
+  // Format date for display
+  const formatDateForDisplay = (dateString: string): string => {
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Handle delete/cancel leave request
+  const handleDelete = async (id: number) => {
+    try {
+      await cancelLeaveRequest(id);
+      setLeaveRequests((prev) => prev.filter((request) => request.id !== id));
+      setShowDeleteModal(false);
+    } catch (err) {
+      console.error("Error canceling leave request:", err);
+      setError(handleApiError(err, "Failed to cancel leave request"));
+    }
   };
 
 
+  // Generate chart data based on actual leave requests
   const chartData = {
-    labels: ["Medical", "Conference", "Personal", "Family"],
+    labels: ["Medical", "Conference", "Personal", "Family", "Other"],
     datasets: [
       {
-        data: [3, 6, 3, 4],
-        backgroundColor: ["#007bff", "#28a745", "#ffc107", "#dc3545"],
+        data: [
+          leaveRequests.filter(r => r.type === "medical").length,
+          leaveRequests.filter(r => r.type === "conference").length,
+          leaveRequests.filter(r => r.type === "personal").length,
+          leaveRequests.filter(r => r.type === "family").length,
+          leaveRequests.filter(r => r.type === "other").length
+        ],
+        backgroundColor: ["#007bff", "#28a745", "#ffc107", "#dc3545", "#6c757d"],
       },
     ],
   };
@@ -155,7 +179,7 @@ const TALeaveRequest = () => {
         <div className="container-fluid">
           <a className="navbar-brand" href="#" style={{ gap: "20px" }}>
             <img
-              src="bilkent-logo.jpg"
+              src="/bilkent-logo.jpg"
               alt="Bilkent University"
               height="30"
               className="me-3"
@@ -285,7 +309,7 @@ const TALeaveRequest = () => {
                   role="button"
                   data-bs-toggle="dropdown"
                 >
-                  <i className="fas fa-user-circle"></i> Kamil Berkay Çetin
+                  <i className="fas fa-user-circle"></i> {user?.fullName || 'User'}
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end">
                   {/* <li>
@@ -358,13 +382,7 @@ const TALeaveRequest = () => {
                           <td>{request.duration} days</td>
                           <td>
                             <span
-                              className={`badge bg-${
-                                request.status === "approved"
-                                  ? "success"
-                                  : request.status === "pending"
-                                  ? "warning"
-                                  : "danger"
-                              }`}
+                              className={`badge bg-${request.status === "approved" ? "success" : request.status === "pending" ? "warning" : "danger"}`}
                             >
                               {request.status}
                             </span>
@@ -552,41 +570,68 @@ const TALeaveRequest = () => {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={() => {
-                    // Yeni request objesini oluşturup state'e ekle
-                    const nextId =
-                      Math.max(0, ...leaveRequests.map((r) => r.id)) + 1;
-                    setLeaveRequests([
-                      ...leaveRequests,
-                      {
-                        id: nextId,
-                        reason: newLeave.reason,
-                        type: newLeave.type as LeaveRequest["type"],
-                        startDate: newLeave.startDate,
-                        endDate: newLeave.endDate,
-                        duration:
-                          (new Date(newLeave.endDate).getTime() -
-                            new Date(newLeave.startDate).getTime()) /
-                            (1000 * 60 * 60 * 24) +
-                          1,
-                        status: "pending",
-                        submittedDate: new Date().toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        }),
-                        details: newLeave.details,
-                      },
-                    ]);
-                    // Modal’ları kapat, formu sıfırla
-                    setShowNewConfirmModal(false);
-                    setNewLeave({
-                      reason: "",
-                      type: "",
-                      startDate: "",
-                      endDate: "",
-                      details: "",
-                    });
+                  onClick={async () => {
+                    try {
+                      // Create the leave request using the API
+                      await createLeaveRequest({
+                        start_date: newLeave.startDate,
+                        end_date: newLeave.endDate,
+                        reason: `${newLeave.type}: ${newLeave.reason}\n\nDetails: ${newLeave.details}`
+                      });
+                      
+                      // Refresh the leave requests from the API
+                      const leaveData = await getMyLeaveRequests();
+                      
+                      // Transform the API data to match our display format
+                      const transformedData: LeaveRequestDisplay[] = leaveData.map(leave => {
+                        // Calculate duration in days
+                        const startDate = new Date(leave.start_date);
+                        const endDate = new Date(leave.end_date);
+                        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        // Determine leave type based on reason
+                        let leaveType: LeaveRequestDisplay["type"] = "other";
+                        if (leave.reason.toLowerCase().includes("medical")) {
+                          leaveType = "medical";
+                        } else if (leave.reason.toLowerCase().includes("conference")) {
+                          leaveType = "conference";
+                        } else if (leave.reason.toLowerCase().includes("family")) {
+                          leaveType = "family";
+                        } else if (leave.reason.toLowerCase().includes("personal")) {
+                          leaveType = "personal";
+                        }
+                        
+                        return {
+                          id: leave.id,
+                          reason: leave.reason,
+                          startDate: formatDateForDisplay(leave.start_date),
+                          endDate: formatDateForDisplay(leave.end_date),
+                          duration: diffDays,
+                          status: leave.status as "pending" | "approved" | "rejected",
+                          type: leaveType,
+                          submittedDate: formatDateForDisplay(leave.created_at),
+                          details: leave.reason,
+                          conflicts: []
+                        };
+                      });
+                      
+                      setLeaveRequests(transformedData);
+                      
+                      // Close modals and reset form
+                      setShowNewConfirmModal(false);
+                      setNewLeave({
+                        reason: "",
+                        type: "",
+                        startDate: "",
+                        endDate: "",
+                        details: "",
+                      });
+                    } catch (err) {
+                      console.error("Error creating leave request:", err);
+                      setError(handleApiError(err, "Failed to create leave request"));
+                      setShowNewConfirmModal(false);
+                    }
                   }}
                 >
                   Yes
@@ -625,7 +670,7 @@ const TALeaveRequest = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Type</label>+{" "}
+                    <label className="form-label">Type</label>
                     <select
                       className="form-select"
                       value={newLeave.type}
@@ -697,15 +742,75 @@ const TALeaveRequest = () => {
                 </button>
                 <button
                   className="btn btn-success"
-                  onClick={() => {
-                    // Basit validasyon: tüm alanlar dolu mu?
+                  onClick={async () => {
+                    // Simple validation: are all fields filled?
                     const { reason, type, startDate, endDate } = newLeave;
                     if (!reason || !type || !startDate || !endDate) {
                       alert("Please fill in all required fields.");
                       return;
                     }
-                    setShowNewRequestModal(false);
-                    setShowNewConfirmModal(true);
+                    
+                    try {
+                      // Create the leave request
+                      await createLeaveRequest({
+                        start_date: startDate,
+                        end_date: endDate,
+                        reason: `${type}: ${reason}\n\nDetails: ${newLeave.details}` // Combine type and reason
+                      });
+                      
+                      // Refresh the leave requests
+                      const leaveData = await getMyLeaveRequests();
+                      
+                      // Transform the API data to match our display format
+                      const transformedData: LeaveRequestDisplay[] = leaveData.map(leave => {
+                        // Calculate duration in days
+                        const startDate = new Date(leave.start_date);
+                        const endDate = new Date(leave.end_date);
+                        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        // Determine leave type based on reason (simplified)
+                        let leaveType: LeaveRequestDisplay["type"] = "other";
+                        if (leave.reason.toLowerCase().includes("medical")) {
+                          leaveType = "medical";
+                        } else if (leave.reason.toLowerCase().includes("conference")) {
+                          leaveType = "conference";
+                        } else if (leave.reason.toLowerCase().includes("family")) {
+                          leaveType = "family";
+                        } else if (leave.reason.toLowerCase().includes("personal")) {
+                          leaveType = "personal";
+                        }
+                        
+                        return {
+                          id: leave.id,
+                          reason: leave.reason,
+                          startDate: formatDateForDisplay(leave.start_date),
+                          endDate: formatDateForDisplay(leave.end_date),
+                          duration: diffDays,
+                          status: leave.status as "pending" | "approved" | "rejected",
+                          type: leaveType,
+                          submittedDate: formatDateForDisplay(leave.created_at),
+                          details: leave.reason,
+                          conflicts: []
+                        };
+                      });
+                      
+                      setLeaveRequests(transformedData);
+                      
+                      // Reset form and close modal
+                      setNewLeave({
+                        reason: "",
+                        type: "",
+                        startDate: "",
+                        endDate: "",
+                        details: ""
+                      });
+                      setShowNewRequestModal(false);
+                      setShowNewConfirmModal(true);
+                    } catch (err) {
+                      console.error("Error creating leave request:", err);
+                      setError(handleApiError(err, "Failed to create leave request"));
+                    }
                   }}
                 >
                   Create Request

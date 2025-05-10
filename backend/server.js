@@ -11,6 +11,7 @@ const courseRoutes = require('./routes/courseRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const swapRoutes = require('./routes/swapRoutes');
+const navigationRoutes = require('./routes/navigationRoutes');
 const db = require('./config/db');
 const loggingService = require('./services/LoggingService');
 const { errorLogger } = require('./middleware/auditLogger');
@@ -74,6 +75,9 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/swaps', swapRoutes);
 
+// Navigation routes that match the frontend navigation bar links
+app.use('/api', navigationRoutes);
+
 // Simple health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
@@ -99,11 +103,4 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-<<<<<<< Updated upstream
 });
-=======
-});
-
-
-
->>>>>>> Stashed changes

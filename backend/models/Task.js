@@ -66,6 +66,18 @@ class Task {
 
   static async findUpcoming(userId, limit = 5) {
     try {
+      // First check if the user has any task assignments
+      const [assignmentCheck] = await db.query(
+        `SELECT COUNT(*) as count FROM task_assignments WHERE user_id = ?`,
+        [userId]
+      );
+      
+      // If no assignments exist, return an empty array instead of failing
+      if (assignmentCheck[0].count === 0) {
+        return [];
+      }
+      
+      // Get upcoming tasks for the user
       const [rows] = await db.query(
         `SELECT t.*, u.full_name as assigned_to_name
         FROM tasks t
@@ -78,7 +90,9 @@ class Task {
       );
       return rows;
     } catch (error) {
-      throw error;
+      console.error('Error in findUpcoming:', error);
+      // Return empty array instead of throwing error
+      return [];
     }
   }
 

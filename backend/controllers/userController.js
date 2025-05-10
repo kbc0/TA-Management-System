@@ -10,14 +10,38 @@ exports.getUsers = async (req, res) => {
   try {
     // Implement pagination
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * limit;
     
-    // TODO: Implement database query with pagination
-    // For now, we'll return a placeholder response
+    // Get all users from the database
+    const [rows] = await db.query(
+      'SELECT id, bilkent_id, email, full_name, role, created_at, updated_at FROM users LIMIT ? OFFSET ?',
+      [limit, offset]
+    );
+    
+    // Get total count for pagination
+    const [countResult] = await db.query('SELECT COUNT(*) as total FROM users');
+    const total = countResult[0].total;
+    
+    // Format the response
+    const users = rows.map(user => ({
+      id: user.id,
+      bilkentId: user.bilkent_id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at
+    }));
+    
     res.json({
-      message: 'User list functionality will be implemented here',
-      pagination: { page, limit, offset }
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     console.error('Get users error:', error);

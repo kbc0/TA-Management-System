@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Navigation from './components/common/Navigation';
+import RoleBasedHomePage from './components/common/RoleBasedHomePage';
 import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 
@@ -15,6 +16,8 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // Dashboard Pages
 import TADashboard from './pages/ta/Dashboard';
+import HomePageForTA from './pages/ta/HomePageForTA';
+import AdminHomePage from './pages/admin/AdminHomePage';
 import TasksPage from './pages/tasks/TasksPage';
 import TaskDashboard from './pages/tasks/TaskDashboard';
 import TaskDetail from './components/tasks/TaskDetail';
@@ -149,29 +152,54 @@ const App: React.FC = () => {
               
               {/* Dashboard Routes for different roles */}
               <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
-                <Route path="/ta/dashboard" element={<TADashboard />} />
+                <Route path="/ta/dashboard" element={<HomePageForTA />} />
+                <Route path="/ta/home" element={<HomePageForTA />} />
+                <Route path="/ta" element={<Navigate to="/ta/home" replace />} />
               </Route>
               
               <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
                 <Route path="/staff/dashboard" element={<TADashboard />} />
+                <Route path="/staff/home" element={<TADashboard />} />
+                <Route path="/staff" element={<Navigate to="/staff/home" replace />} />
               </Route>
               
               <Route element={<ProtectedRoute allowedRoles={['department_chair']} />}>
                 <Route path="/chair/dashboard" element={<TADashboard />} />
+                <Route path="/chair/home" element={<TADashboard />} />
+                <Route path="/chair" element={<Navigate to="/chair/home" replace />} />
               </Route>
               
               <Route element={<ProtectedRoute allowedRoles={['dean']} />}>
                 <Route path="/dean/dashboard" element={<TADashboard />} />
+                <Route path="/dean/home" element={<TADashboard />} />
+                <Route path="/dean" element={<Navigate to="/dean/home" replace />} />
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/admin/dashboard" element={<TADashboard />} />
-                <Route path="/admin" element={<div>Admin Section Page</div>} />
+                <Route path="/admin/dashboard" element={<AdminHomePage />} />
+                <Route path="/admin/home" element={<AdminHomePage />} />
+                <Route path="/admin" element={<Navigate to="/admin/home" replace />} />
+              </Route>
+              
+              {/* Generic home route - conditionally render based on role */}
+              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin', 'dean']} />}>
+                <Route path="/home" element={<RoleBasedHomePage />} />
               </Route>
 
               {/* Profile Route - Accessible to all authenticated users */}
               <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin', 'dean']} />}>
                 <Route path="/profile" element={<UserProfilePage />} />
+              </Route>
+              
+              {/* Additional routes to match the navigation bar */}
+              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin', 'dean']} />}>
+                <Route path="/dashboard" element={<RoleBasedHomePage />} />
+              </Route>
+              
+              {/* Routes that match exactly what's in the navigation bar */}
+              <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
+                <Route path="/initiate-swap" element={<SwapDemo />} />
+                <Route path="/my-swap-requests" element={<TASwapApprovalPage />} />
               </Route>
 
               {/* Task Management Routes */}
@@ -190,17 +218,21 @@ const App: React.FC = () => {
 
               <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin']} />}>
                 <Route path="/leave/statistics" element={<LeaveStatisticsDashboard />} />
+                <Route path="/leave-statistics" element={<LeaveStatisticsDashboard />} />
               </Route>
 
               {/* TA specific leave request route */}
               <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
                 <Route path="/leave/request" element={<LeaveRequestForm />} />
+                <Route path="/request-leave" element={<LeaveRequestForm />} />
               </Route>
 
               {/* Swap Management Routes */}
               <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
                 <Route path="/swaps/demo" element={<SwapDemo />} />
                 <Route path="/swaps/requests" element={<TASwapApprovalPage />} />
+                <Route path="/initiate-swap" element={<SwapDemo />} />
+                <Route path="/my-swap-requests" element={<TASwapApprovalPage />} />
               </Route>
               <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin']} />}>
                 <Route path="/swaps/approve" element={<StaffSwapApprovalPage />} />

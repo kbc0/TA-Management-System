@@ -2,57 +2,71 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./TASwapRequestPage.css";
 import { useState, useEffect } from "react";
 import SwapRequestDetailsModal from "./SwapRequestDetailsModal";
-import { SwapRequest } from "../../types";
-import { useNavigate } from "react-router-dom"; // En üste ekle
+import { UISwapRequest, transformApiToUiSwapRequest } from "./types";
+import { 
+  getMySwapRequests, 
+  getPendingSwapRequests, 
+  getSwapRequestById, 
+  createSwapRequest, 
+  approveSwapRequest, 
+  rejectSwapRequest, 
+  cancelSwapRequest, 
+  getEligibleSwapTargets,
+  EligibleSwapTarget
+} from "../../api/swaps";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { handleApiError } from "../../api/apiUtils";
 
-type FilterType = "All" | "Pending" | "Accepted" | "Declined";
+type FilterType = "All" | "pending" | "approved" | "rejected";
 
 interface RequestsState {
-  myRequests: SwapRequest[];
-  othersRequests: SwapRequest[];
+  myRequests: UISwapRequest[];
+  othersRequests: UISwapRequest[];
 }
 
 interface NewSwapForm {
-  /*yourCourse: string;
-  yourTask: string;
-  yourDate: string;
-  yourTime: string;
-  withTa: string;
-  proposedCourse: string;
-  proposedTask: string;
-  proposedDate: string;
-  proposedTime: string;
-  reason: string;*/
   assignmentId: string;
   reason: string;
   targetTa: string;
 }
 
 const TASwapRequestPage = () => {
-  const [activeFilter, setActiveFilter] = useState<FilterType>("All");
+  // State for UI components
+  const [filter, setFilter] = useState<FilterType>("All");
   const [selectedRequest, setSelectedRequest] = useState<number | null>(null);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showNewSwapModal, setShowNewSwapModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [activeMenu, setActiveMenu] = useState("swap-requests");
+  
+  // State for data
   const [requests, setRequests] = useState<RequestsState>({
     myRequests: [],
     othersRequests: [],
   });
-  const navigate = useNavigate(); // Fonksiyon içinde tanımla
-
-  const [activeMenu, setActiveMenu] = useState("swap-requests");
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [availableTAs, setAvailableTAs] = useState<EligibleSwapTarget[]>([]);
+  const [assignments, setAssignments] = useState<{id: string, label: string}[]>([]);
+  
+  // Form state
   const [newSwap, setNewSwap] = useState<NewSwapForm>({
     assignmentId: "",
     reason: "",
     targetTa: "",
   });
+  
+  // Selected request details
+  const [detailedRequest, setDetailedRequest] = useState<UISwapRequest | null>(null);
+  
+  // Hooks
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const [detailedRequest, setDetailedRequest] = useState<SwapRequest | null>(
-    null
-  );
-
+  // Handle create button click - validate form and show confirmation
   const handleCreate = () => {
     const { assignmentId, reason, targetTa } = newSwap;
     if (!assignmentId || !reason || !targetTa) {
@@ -61,47 +75,9 @@ const TASwapRequestPage = () => {
     }
 
     setShowConfirmModal(true);
-    //setShowNewSwapModal(false);///////////BU COMMENTİ AÇ Bİ NOLACAK
-    // reset newSwap if needed
   };
 
-  // const filteredRequests = (list: SwapRequest[]) =>
-  // list.filter(r => activeFilter === "All" || r.status === activeFilter);
-
-  const newSwapRequest: SwapRequest = {
-    id: 0,
-    title: "New Swap Request",
-    status: "Pending",
-    yourTask: {
-      course: "",
-      task: "",
-      date: "",
-      time: "",
-      location: "",
-      status: "Pending",
-      requester: "You",
-      with: "",
-    },
-    proposedTask: {
-      ta: "",
-      course: "",
-      task: "",
-      date: "",
-      time: "",
-    },
-    timeline: {
-      sent: "",
-      taResponse: "",
-      instructorApproval: "",
-    },
-    reason: "",
-  };
-
-  //const handleNavigation = (path: string) => {
-  //navigate(path);
-  //setActiveMenu(path.replace("/", ""));
-  //};
-
+  // Apply UI fixes when component mounts
   useEffect(() => {
     document.body.style.paddingTop = "80px";
     document.querySelector(".navbar-collapse")?.classList.remove("show");
@@ -110,221 +86,186 @@ const TASwapRequestPage = () => {
     document.documentElement.scrollTop = 0;
   }, []);
 
+  // Fetch swap requests data from API
   useEffect(() => {
     const fetchData = async () => {
-      const sampleData: RequestsState = {
-        myRequests: [
-          {
-            id: 1,
-            title: "CS101 Lab Session",
-            status: "Pending",
-            yourTask: {
-              course: "CS101",
-              task: "Lab Session",
-              date: "March 22, 2025",
-              time: "10:00 - 12:00",
-              location: "EA-409",
-              status: "Pending",
-              requester: "You",
-              with: "Bugra Malkara",
-            },
-            proposedTask: {
-              ta: "Bugra Malkara",
-              course: "CS101",
-              task: "Lab Session",
-              date: "March 29, 2025",
-              time: "10:00 - 12:00",
-            },
-            timeline: {
-              sent: "March 15, 2025",
-              taResponse: "March 16, 2025",
-              instructorApproval: "March 17, 2025",
-            },
-          },
-          {
-            id: 2,
-            title: "CS319 Project Grading",
-            status: "Pending",
-            yourTask: {
-              course: "CS319",
-              task: "Project Grading",
-              date: "February 15, 2025",
-              time: "13:00 - 17:00",
-              location: "",
-              status: "Pending",
-              requester: "You",
-              with: "Arda Kirci",
-            },
-            proposedTask: {
-              ta: "Arda Kirci",
-              course: "CS319",
-              task: "Project Grading",
-              date: "February 22, 2025",
-              time: "13:00 - 17:00",
-            },
-            timeline: {
-              sent: "February 10, 2025",
-              taResponse: "February 11, 2025",
-              instructorApproval: "February 12, 2025",
-            },
-          },
-          // Diğer talepler...
-        ],
-        othersRequests: [
-          {
-            id: 101,
-            title: "CS101 Office Hours",
-            status: "Pending",
-            yourTask: {
-              course: "CS101",
-              task: "Office Hours",
-              date: "March 24, 2025",
-              time: "14:00 - 16:00",
-              location: "EA-502",
-              status: "Pending",
-              requester: "Vildan Çetin",
-              with: "You",
-            },
-            proposedTask: {
-              ta: "You",
-              course: "CS101",
-              task: "Office Hours",
-              date: "March 31, 2025",
-              time: "14:00 - 16:00",
-            },
-            timeline: {
-              sent: "March 18, 2025",
-              taResponse: "March 19, 2025",
-              instructorApproval: "March 20, 2025",
-            },
-          },
-          // Diğer talepler...
-        ],
-      };
-      setRequests(sampleData);
+      try {
+        setLoading(true);
+        // Fetch real swap requests from the API
+        const mySwapRequests = await getMySwapRequests();
+        const pendingRequests = await getPendingSwapRequests();
+        
+        // Transform API responses to UI format
+        const transformedMyRequests = mySwapRequests.map(transformApiToUiSwapRequest);
+        const transformedPendingRequests = pendingRequests.map(transformApiToUiSwapRequest);
+        
+        setRequests({
+          myRequests: transformedMyRequests,
+          othersRequests: transformedPendingRequests
+        });
+        setError(null);
+        
+        // Fetch sample assignments for the form
+        // In a real implementation, these would come from an API
+        setAssignments([
+          { id: "1", label: "CS101 Lab Session - May 15 2025, 10:00-12:00" },
+          { id: "2", label: "CS315 Grading - May 20 2025, 14:00-16:00" },
+          { id: "3", label: "CS342 Exam Proctoring - May 25 2025, 09:00-12:00" },
+        ]);
+      } catch (err) {
+        console.error('Error fetching swap requests:', err);
+        setError(handleApiError(err, 'Failed to load swap requests'));
+      } finally {
+        setLoading(false);
+      }
     };
+    
     fetchData();
   }, []);
 
-  // placeholder: fetch user's assignments for swapping
-  const assignments = [
-    { id: "a1", label: "CS101 Lab Session - March 22 2025, 10:00-12:00" },
-    { id: "a2", label: "CS315 Grading - March 24 2025, 14:00-16:00" },
-  ];
+  // Fetch eligible TAs when an assignment is selected
+  useEffect(() => {
+    const fetchEligibleTAs = async () => {
+      if (!newSwap.assignmentId) {
+        setAvailableTAs([]);
+        return;
+      }
+      
+      try {
+        const assignmentId = parseInt(newSwap.assignmentId);
+        if (isNaN(assignmentId)) return;
+        
+        const eligibleTAs = await getEligibleSwapTargets(assignmentId, 'task');
+        setAvailableTAs(eligibleTAs);
+      } catch (err) {
+        console.error('Error fetching eligible TAs:', err);
+        setError(handleApiError(err, 'Failed to load eligible TAs'));
+      }
+    };
+    
+    fetchEligibleTAs();
+  }, [newSwap.assignmentId]);
 
-  // placeholder: fetch available TAs based on selected assignment
-  const availableTas = [
-    { id: "t1", name: "Arda Kirci" },
-    { id: "t2", name: "Vildan Çetin" },
-    { id: "t3", name: "Elif Yılmaz" },
-  ];
-
-  const handleAction = (requestId: number, type: "accept" | "decline") => {
-    setSelectedRequest(requestId);
-    if (type === "accept") {
+  // Handle action button click (accept/decline)
+  const handleAction = (id: number, action: "accept" | "decline") => {
+    setSelectedRequest(id);
+    if (action === "accept") {
       setShowAcceptModal(true);
     } else {
       setShowDeclineModal(true);
     }
   };
 
-  const handleViewDetails = (request: SwapRequest) => {
+  // Handle view details button click
+  const handleViewDetails = (request: UISwapRequest) => {
     setDetailedRequest(request);
     setShowDetailModal(true);
   };
 
-  const cancelRequest = (id: number) => {
-    setRequests((prev) => ({
-      ...prev,
-      myRequests: prev.myRequests.map((req) =>
-        req.id === id ? { ...req, status: "Declined" } : req
-      ),
-    }));
-    closeDetailModal();
+  // Cancel a swap request
+  const cancelRequest = async (id: number) => {
+    try {
+      // Call the API to cancel the request
+      await cancelSwapRequest(id);
+      
+      // Remove the request from the list
+      setRequests((prev) => ({
+        ...prev,
+        myRequests: prev.myRequests.filter((r) => r.id !== id),
+      }));
+      
+      // Close the detail modal if open
+      closeDetailModal();
+      
+      // Show success message
+      alert('Request cancelled successfully!');
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+      alert('Failed to cancel request. Please try again.');
+    }
   };
 
+  // Close the detail modal
   const closeDetailModal = () => {
     setShowDetailModal(false);
     setDetailedRequest(null);
   };
 
-  const confirmAction = (type: "accept" | "decline") => {
-    const updatedRequests = { ...requests };
-    const request = updatedRequests.othersRequests.find(
-      (r) => r.id === selectedRequest
-    );
+  const confirmAction = async (type: "accept" | "decline") => {
+    if (!selectedRequest) return;
 
-    if (request) {
-      request.status = type === "accept" ? "Accepted" : "Declined";
-      setRequests(updatedRequests);
-    }
-
-    if (type === "accept") {
+    try {
+      // Call the appropriate API based on action type
+      if (type === "accept") {
+        await approveSwapRequest(selectedRequest);
+      } else {
+        await rejectSwapRequest(selectedRequest);
+      }
+      
+      // Refresh the data after action
+      const pendingRequests = await getPendingSwapRequests();
+      const transformedPendingRequests = pendingRequests.map(transformApiToUiSwapRequest);
+      
+      // Update the state
+      setRequests(prev => ({
+        ...prev,
+        othersRequests: transformedPendingRequests
+      }));
+      
+      // Close modals
       setShowAcceptModal(false);
-    } else {
       setShowDeclineModal(false);
+      setSelectedRequest(null);
+      
+      // Show success message
+      alert(`Request ${type === "accept" ? "approved" : "rejected"} successfully!`);
+    } catch (err) {
+      console.error(`Error ${type === "accept" ? "approving" : "rejecting"} request:`, err);
+      alert(`Failed to ${type} request. Please try again.`);
     }
   };
 
-  const filteredRequests = (list: SwapRequest[]): SwapRequest[] => {
-    return list.filter(
-      (request) => activeFilter === "All" || request.status === activeFilter
-    );
+  // Filter requests based on the active filter
+  const filteredRequests = (requestsList: UISwapRequest[]) => {
+    if (filter === "All") return requestsList;
+    // Convert filter to lowercase to match API status format
+    return requestsList.filter((r) => r.status === filter.toLowerCase());
   };
 
-  const handleSendRequest = () => {
-    const selectedAssignment = assignments.find(
-      (a: { id: string; label: string }) => a.id === newSwap.assignmentId
-    );
-
-    if (!selectedAssignment) {
-      alert("Please select your task.");
-      return;
+  // Send a new swap request
+  const handleSendRequest = async () => {
+    try {
+      // Create the swap request through the API
+      const response = await createSwapRequest({
+        target_id: parseInt(newSwap.targetTa),
+        assignment_id: parseInt(newSwap.assignmentId),
+        assignment_type: 'task' // Assuming it's a task for now
+      });
+      
+      // Transform the API response to UI format
+      const transformedResponse = transformApiToUiSwapRequest(response);
+      
+      // Update the state with the new request
+      setRequests({
+        ...requests,
+        myRequests: [...requests.myRequests, transformedResponse],
+      });
+      
+      // Close modals and reset form
+      setShowConfirmModal(false);
+      setNewSwap({
+        assignmentId: "",
+        reason: "",
+        targetTa: "",
+      });
+      
+      // Show success message
+      alert('Swap request created successfully!');
+    } catch (err) {
+      console.error('Error creating swap request:', err);
+      alert('Failed to create swap request. Please try again.');
+      setShowConfirmModal(false);
     }
-
-    const nextId =
-      requests.myRequests.length > 0
-        ? Math.max(...requests.myRequests.map((r) => r.id)) + 1
-        : 1;
-
-    const newRequestData: SwapRequest = {
-      id: nextId,
-      title: selectedAssignment.label.split(" - ")[0],
-      reason: newSwap.reason, // Assuming reason comes from newSwap state
-      status: "Pending",
-      yourTask: {
-        course: selectedAssignment.label.split(" - ")[0],
-        task: "", // Populate as needed
-        date: selectedAssignment.label.split(" - ")[1].split(",")[0].trim(),
-        time: selectedAssignment.label.split(" - ")[1].split(",")[1].trim(),
-        location: "", // Populate as needed
-        status: "Pending", // Initial status of the task itself
-        requester: "You", // Or get current user ID/name
-        with: newSwap.targetTa, // The TA this request is for
-      },
-      proposedTask: {
-        ta: newSwap.targetTa,
-        // These details would typically be for the *targetTa's* task they are offering
-        // For now, let's assume it mirrors the structure, but might need actual data
-        course: "", // Placeholder - needs data for target TA's task
-        task: "",   // Placeholder
-        date: "",   // Placeholder
-        time: "",   // Placeholder
-      },
-      timeline: {
-        sent: new Date().toISOString(),
-        taResponse: "",
-        instructorApproval: "",
-      },
-    };
-
-    setRequests((prevRequests) => ({
-      ...prevRequests,
-      myRequests: [newRequestData, ...prevRequests.myRequests],
-    }));
-
-    setShowConfirmModal(false);
-    setShowNewSwapModal(false);
   };
 
   return (
@@ -459,18 +400,14 @@ const TASwapRequestPage = () => {
         </div>
 
         <div className="filters mb-4">
-          {(["All", "Pending", "Accepted", "Declined"] as FilterType[]).map(
+          {(["All", "pending", "approved", "rejected"] as FilterType[]).map(
             (filter) => (
               <button
                 key={filter}
-                className={`btn btn-sm ${
-                  activeFilter === filter
-                    ? "btn-primary"
-                    : "btn-outline-secondary"
-                }`}
-                onClick={() => setActiveFilter(filter)}
+                className={`filter-btn ${filter === filter ? "active" : ""}`}
+                onClick={() => setFilter(filter)}
               >
-                {filter}
+                {filter === "All" ? "All" : filter.charAt(0).toUpperCase() + filter.slice(1)}
               </button>
             )
           )}
@@ -489,41 +426,45 @@ const TASwapRequestPage = () => {
                 </h2>
               </div>
               <div className="card-body">
-              {filteredRequests(requests.myRequests).map((request) => (
-  <div key={request.id} className="request-card mb-3">
-    <div className="d-flex justify-content-between align-items-start">
-      <div>
-        <h3 className="h6 fw-bold mb-1">{request.title}</h3>
-        <div className="text-muted small mb-2">
-          {/* Tarih ve saat bilgilerini buraya taşıyın */}
-          {request.yourTask.date && (
-            <span className="me-3">{request.yourTask.date}</span>
-          )}
-          {request.yourTask.time && (
-            <span className="me-3">{request.yourTask.time}</span>
-          )}
-        </div>
-        <p className="small mb-0">
-          Requested to swap with: {request.yourTask.with}
-        </p>
-      </div>
-      <div className={`status-badge ${request.yourTask.status.toLowerCase()}`}>
-        {request.status}
-      </div>
-    </div>
-    <div className="mt-2">
-      <button className="btn btn-link btn-sm text-danger p-0 me-3">
-        Cancel Request
-      </button>
-      <button
-        className="btn btn-link btn-sm p-0"
-        onClick={() => handleViewDetails(request)}
-      >
-        View Details
-      </button>
-    </div>
-  </div>
-))}
+                {filteredRequests(requests.myRequests).map((request) => (
+                  <div key={request.id} className="request-card mb-3">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h3 className="h6 fw-bold mb-1">{request.title}</h3>
+                        <div className="text-muted small mb-2">
+                          {request.yourTask.date && (
+                            <span className="me-3">{request.yourTask.date}</span>
+                          )}
+                          {request.yourTask.time && (
+                            <span className="me-3">{request.yourTask.time}</span>
+                          )}
+                        </div>
+                        <p className="small mb-0">
+                          Requested to swap with: {request.yourTask.with}
+                        </p>
+                      </div>
+                      <div
+                        className={`status-badge ${request.status.toLowerCase()}`}
+                      >
+                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <button
+                        className="btn btn-link btn-sm text-danger p-0 me-3"
+                        onClick={() => cancelRequest(request.id)}
+                      >
+                        Cancel Request
+                      </button>
+                      <button
+                        className="btn btn-link btn-sm p-0"
+                        onClick={() => handleViewDetails(request)}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -543,22 +484,19 @@ const TASwapRequestPage = () => {
                         <div className="text-muted small mb-2">
                           <span className="me-3">{request.yourTask.date}</span>
                           <span className="me-3">{request.yourTask.time}</span>
-                          {request.location && (
-                            <span>{request.yourTask.location}</span>
-                          )}
                         </div>
                         <p className="small mb-0">
                           Requested by: {request.yourTask.requester}
                         </p>
                       </div>
                       <div
-                        className={`status-badge ${request.yourTask.status.toLowerCase()}`}
+                        className={`status-badge ${request.status.toLowerCase()}`}
                       >
-                        {request.status}
+                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </div>
                     </div>
                     <div className="mt-2">
-                      {request.status === "Pending" && (
+                      {request.status === "pending" && (
                         <>
                           <button
                             className="btn btn-success btn-sm me-2"
@@ -610,6 +548,35 @@ const TASwapRequestPage = () => {
                 <button
                   className="btn btn-secondary"
                   onClick={() => setShowAcceptModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeclineModal && (
+        <div className="modal-overlay">
+          <div className="modal-dialog modal-dialog-centered modal-xl">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Confirm Decline</h5>
+              </div>
+              <div className="modal-body">
+                <p>Are you sure you want to decline this request?</p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-danger"
+                  onClick={() => confirmAction("decline")}
+                >
+                  Yes, Decline
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeclineModal(false)}
                 >
                   Cancel
                 </button>
@@ -682,9 +649,9 @@ const TASwapRequestPage = () => {
                         }
                       >
                         <option value="">Select a TA</option>
-                        {availableTas.map((ta) => (
-                          <option key={ta.id} value={ta.name}>
-                            {ta.name} <span>(available)</span>
+                        {availableTAs.map((ta) => (
+                          <option key={ta.id} value={ta.id}>
+                            {ta.fullName}
                           </option>
                         ))}
                       </select>
@@ -766,15 +733,15 @@ const TASwapRequestPage = () => {
                     </tr>
                     <tr>
                       <th>Date</th>
-                      <td>{detailedRequest.date}</td>
+                      <td>{detailedRequest.yourTask.date}</td>
                     </tr>
                     <tr>
                       <th>Time</th>
-                      <td>{detailedRequest.time}</td>
+                      <td>{detailedRequest.yourTask.time}</td>
                     </tr>
                     <tr>
                       <th>Location</th>
-                      <td>{detailedRequest.location || "N/A"}</td>
+                      <td>{detailedRequest.yourTask.location || "N/A"}</td>
                     </tr>
                     <tr>
                       <th>Swap With</th>

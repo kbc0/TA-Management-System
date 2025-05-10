@@ -91,24 +91,62 @@ const HomePage: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Replace with your actual API endpoint
-        const [
-          userResponse,
-          tasksResponse,
-          approvalsResponse,
-          announcementsResponse,
-        ] = await Promise.all([
-          apiClient.get<User>("/users/me"),
-          apiClient.get<Task[]>("/tasks/upcoming"),
-          apiClient.get<PendingApproval[]>("/approvals/pending"),
-          apiClient.get<Announcement[]>("/announcements"),
-        ]);
-
-        setUserInfo(userResponse.data);
-        setUpcomingTasks(tasksResponse.data);
-        setPendingApprovals(approvalsResponse.data);
-        setAnnouncements(announcementsResponse.data);
-        // setError(null);
+        
+        // Get user info
+        try {
+          const userResponse = await apiClient.get<User>("/users/me");
+          setUserInfo(userResponse.data);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+          // Use default user info from localStorage if available
+          const token = localStorage.getItem("token");
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              setUserInfo({
+                id: payload.id || 0,
+                bilkent_id: payload.bilkentId || "",
+                full_name: payload.fullName || "User",
+                email: payload.email || "",
+                department: "",
+                role: payload.role || "ta",
+                total_hours: 0,
+                max_hours: 0
+              });
+            } catch (e) {
+              console.error("Error parsing token:", e);
+            }
+          }
+        }
+        
+        // Get upcoming tasks
+        try {
+          const tasksResponse = await apiClient.get<Task[]>("/tasks/upcoming");
+          setUpcomingTasks(Array.isArray(tasksResponse.data) ? tasksResponse.data : []);
+        } catch (error) {
+          console.error("Error fetching upcoming tasks:", error);
+          setUpcomingTasks([]);
+        }
+        
+        // Get pending approvals
+        try {
+          const approvalsResponse = await apiClient.get<PendingApproval[]>("/approvals/pending");
+          setPendingApprovals(Array.isArray(approvalsResponse.data) ? approvalsResponse.data : []);
+        } catch (error) {
+          console.error("Error fetching pending approvals:", error);
+          setPendingApprovals([]);
+        }
+        
+        // Get announcements
+        try {
+          const announcementsResponse = await apiClient.get<Announcement[]>("/announcements");
+          setAnnouncements(Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []);
+        } catch (error) {
+          console.error("Error fetching announcements:", error);
+          setAnnouncements([]);
+        }
+        
+        setError(null);
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           setError(error.response?.data?.message || "Failed to load data");

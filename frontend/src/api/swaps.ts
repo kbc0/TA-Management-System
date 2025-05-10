@@ -114,7 +114,7 @@ export const getEligibleSwapTargets = async (
   }
   
   const response = await fetch(
-    `${apiUrl}/swaps/eligible?assignmentId=${assignmentId}&assignmentType=${assignmentType}`, 
+    `${apiUrl}/swaps/eligible-targets/${assignmentId}/${assignmentType}`, 
     {
       method: 'GET',
       headers: {
@@ -129,7 +129,14 @@ export const getEligibleSwapTargets = async (
     throw new Error(errorData.message || 'Failed to fetch eligible swap targets');
   }
 
-  return await response.json();
+  // Transform the response to match our expected format
+  const data = await response.json();
+  return data.map((user: any) => ({
+    id: user.id,
+    fullName: user.full_name,
+    bilkentId: user.bilkent_id,
+    email: user.email
+  }));
 };
 
 // Create a new swap request
@@ -203,6 +210,69 @@ export const rejectSwapRequest = async (swapId: number): Promise<SwapRequest> =>
   }
 
   return await response.json();
+};
+
+// Get a specific swap request by ID
+export const getSwapRequestById = async (swapId: number): Promise<SwapRequest> => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
+  const response = await fetch(`${apiUrl}/swaps/${swapId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch swap request');
+  }
+
+  const swapData = await response.json();
+  
+  // Transform the data to include the UI-specific fields
+  return {
+    ...swapData,
+    title: `Swap Request #${swapData.id}`,
+    yourTask: {
+      course: swapData.assignment_type === 'task' ? 
+        swapData.course_code || 'Unknown Course' : 
+        swapData.exam_course_code || 'Unknown Course',
+      task: swapData.assignment_title || 'Unknown Assignment',
+      date: new Date(swapData.assignment_type === 'task' ? 
+        swapData.due_date : 
+        swapData.exam_date).toLocaleDateString(),
+      time: swapData.assignment_type === 'task' ? 
+        'N/A' : 
+        `${swapData.start_time || '00:00'} - ${swapData.end_time || '00:00'}`,
+      location: swapData.assignment_type === 'task' ? 
+        'N/A' : 
+        swapData.room_number || 'Unknown Location'
+    },
+    proposedTask: {
+      course: swapData.target_course_code || 'Unknown Course',
+      task: swapData.target_assignment_title || 'Unknown Assignment',
+      date: new Date(swapData.target_due_date || swapData.target_exam_date || Date.now()).toLocaleDateString(),
+      time: swapData.assignment_type === 'task' ? 
+        'N/A' : 
+        `${swapData.target_start_time || '00:00'} - ${swapData.target_end_time || '00:00'}`
+    },
+    reason: swapData.reason || 'No reason provided',
+    timeline: {
+      sent: new Date(swapData.created_at).toLocaleString(),
+      taResponse: swapData.status === 'pending' ? 
+        'Pending' : 
+        `${swapData.status.charAt(0).toUpperCase() + swapData.status.slice(1)} on ${new Date(swapData.updated_at).toLocaleString()}`,
+      instructorApproval: swapData.status === 'approved' && swapData.approver_id ? 
+        `Approved by ${swapData.approver_name || 'Staff'} on ${new Date(swapData.approved_at || swapData.updated_at).toLocaleString()}` : 
+        'Pending'
+    }
+  };
 };
 
 // Final approval of a swap request (as staff/admin)

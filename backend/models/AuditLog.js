@@ -69,10 +69,22 @@ class AuditLog {
         [entity, entityId, limit, offset]
       );
       
-      return rows.map(row => ({
-        ...row,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
-      }));
+      return rows.map(row => {
+        let parsedMetadata = null;
+        if (row.metadata) {
+          try {
+            parsedMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          } catch (e) {
+            console.error(`Error parsing metadata for log ID ${row.id}:`, e);
+            // Keep metadata as is if it can't be parsed
+            parsedMetadata = row.metadata;
+          }
+        }
+        return {
+          ...row,
+          metadata: parsedMetadata
+        };
+      });
     } catch (error) {
       console.error('Error finding audit logs by entity:', error);
       throw error;
@@ -100,10 +112,22 @@ class AuditLog {
         [userId, limit, offset]
       );
       
-      return rows.map(row => ({
-        ...row,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
-      }));
+      return rows.map(row => {
+        let parsedMetadata = null;
+        if (row.metadata) {
+          try {
+            parsedMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          } catch (e) {
+            console.error(`Error parsing metadata for log ID ${row.id}:`, e);
+            // Keep metadata as is if it can't be parsed
+            parsedMetadata = row.metadata;
+          }
+        }
+        return {
+          ...row,
+          metadata: parsedMetadata
+        };
+      });
     } catch (error) {
       console.error('Error finding audit logs by user ID:', error);
       throw error;
@@ -131,10 +155,22 @@ class AuditLog {
         [action, limit, offset]
       );
       
-      return rows.map(row => ({
-        ...row,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
-      }));
+      return rows.map(row => {
+        let parsedMetadata = null;
+        if (row.metadata) {
+          try {
+            parsedMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          } catch (e) {
+            console.error(`Error parsing metadata for log ID ${row.id}:`, e);
+            // Keep metadata as is if it can't be parsed
+            parsedMetadata = row.metadata;
+          }
+        }
+        return {
+          ...row,
+          metadata: parsedMetadata
+        };
+      });
     } catch (error) {
       console.error('Error finding audit logs by action:', error);
       throw error;
@@ -204,10 +240,22 @@ class AuditLog {
       
       const [rows] = await db.query(query, params);
       
-      return rows.map(row => ({
-        ...row,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
-      }));
+      return rows.map(row => {
+        let parsedMetadata = null;
+        if (row.metadata) {
+          try {
+            parsedMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          } catch (e) {
+            console.error(`Error parsing metadata for log ID ${row.id}:`, e);
+            // Keep metadata as is if it can't be parsed
+            parsedMetadata = row.metadata;
+          }
+        }
+        return {
+          ...row,
+          metadata: parsedMetadata
+        };
+      });
     } catch (error) {
       console.error('Error searching audit logs:', error);
       throw error;

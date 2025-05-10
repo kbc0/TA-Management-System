@@ -37,22 +37,22 @@ const LoginPage: React.FC = () => {
       // Redirect based on user role
       switch (data.user.role) {
         case 'admin':
-          navigate("/admin/dashboard");
+          navigate("/admin/home");
           break;
         case 'ta':
-          navigate("/ta/dashboard");
+          navigate("/ta/home");
           break;
         case 'staff':
-          navigate("/staff/dashboard");
+          navigate("/staff/home");
           break;
         case 'department_chair':
-          navigate("/chair/dashboard");
+          navigate("/chair/home");
           break;
         case 'dean':
-          navigate("/dean/dashboard");
+          navigate("/dean/home");
           break;
         default:
-          navigate("/dashboard");
+          navigate("/home");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';

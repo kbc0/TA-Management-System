@@ -76,25 +76,6 @@ const SwapEligibleTargets: React.FC<SwapEligibleTargetsProps> = ({
         console.error('Error fetching eligible targets:', err);
         if (isMounted) {
           setError(err.message || 'Failed to load eligible targets');
-          
-          // Mock data for demonstration (only when API fails)
-          const mockTAs: EligibleTA[] = [
-            { id: 1, full_name: 'Ahmet Yilmaz', bilkent_id: '21701234', email: 'ahmet@bilkent.edu.tr' },
-            { id: 2, full_name: 'Ayse Kaya', bilkent_id: '21805678', email: 'ayse@bilkent.edu.tr' },
-            { id: 3, full_name: 'Mehmet Demir', bilkent_id: '21903456', email: 'mehmet@bilkent.edu.tr' },
-          ];
-          setEligibleTAs(mockTAs);
-          
-          // Mock assignment details
-          setAssignmentDetails({
-            title: 'CS101 Lab Session',
-            course_id: 'CS101',
-            due_date: '2025-04-15',
-            exam_name: assignmentType === 'exam' ? 'Midterm Exam' : undefined,
-            exam_date: assignmentType === 'exam' ? '2025-04-15' : undefined,
-            start_time: assignmentType === 'exam' ? '10:00' : undefined,
-            end_time: assignmentType === 'exam' ? '12:00' : undefined,
-          });
         }
       } finally {
         if (isMounted) {
