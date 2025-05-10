@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const { jwtSecret, jwtExpiresIn } = require('../config/auth');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const loggingService = require('../services/LoggingService');
+const { ROLES, isValidRole, getPermissionsForRole } = require('../config/roles');
 
 // Store reset tokens temporarily (In production, use a database)
 const resetTokens = {};
@@ -124,9 +126,12 @@ exports.signup = async (req, res) => {
       return res.status(409).json({ message: 'Email is already in use' });
     }
 
-    // Validate role (assuming roles are predefined)
-    const validRoles = ['ta', 'staff', 'department_chair', 'dean', 'admin']; // Match database enum values
-    if (role && !validRoles.includes(role)) {
+
+    // Validate role using our role configuration
+    if (role && !isValidRole(role)) {
+      // Get the list of valid roles for better error reporting
+      const validRoles = Object.values(ROLES);
+
       return res.status(400).json({ 
         message: 'Invalid role specified',
         validRoles
@@ -139,12 +144,20 @@ exports.signup = async (req, res) => {
       email,
       full_name: fullName,
       password, // The User model should handle password hashing
-      role: role || 'ta' // Default role if not specified
+      role: role || ROLES.TEACHING_ASSISTANT // Default role if not specified
     });
 
+    // Get permissions for the user's role
+    const permissions = getPermissionsForRole(newUser.role);
+    
     // Generate JWT token
     const token = jwt.sign(
-      { id: newUser.id, bilkentId: newUser.bilkent_id, role: newUser.role },
+      { 
+        id: newUser.id, 
+        bilkentId: newUser.bilkent_id, 
+        role: newUser.role,
+        permissions: permissions
+      },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -158,12 +171,38 @@ exports.signup = async (req, res) => {
         bilkentId: newUser.bilkent_id,
         email: newUser.email,
         fullName: newUser.full_name,
-        role: newUser.role
+        role: newUser.role,
+        permissions: permissions
       }
     });
+    
+    // Log the signup event
+    await loggingService.logAuth(
+      'signup',
+      newUser,
+      `User ${newUser.bilkent_id} registered successfully`,
+      { role: newUser.role, email: newUser.email },
+      req
+    );
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ message: 'Server error during signup', error: error.message });
+
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during user signup',
+      req
+    );
+    
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during signup' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
   }
 };
 
@@ -212,9 +251,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Get permissions for the user's role
+    const permissions = getPermissionsForRole(user.role);
+    
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, bilkentId: user.bilkent_id, role: user.role },
+      { 
+        id: user.id, 
+        bilkentId: user.bilkent_id, 
+        role: user.role,
+        permissions: permissions
+      },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );
@@ -227,12 +274,39 @@ exports.login = async (req, res) => {
         bilkentId: user.bilkent_id,
         email: user.email,
         fullName: user.full_name,
-        role: user.role
+        role: user.role,
+        permissions: permissions
       }
     });
+    
+    // Log the login event
+    await loggingService.logAuth(
+      'login',
+      user,
+      `User ${user.bilkent_id} logged in successfully`,
+      { role: user.role },
+      req
+    );
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login', error: error.message });
+
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during user login',
+      req
+    );
+    
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during login' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
+
   }
 };
 
@@ -303,9 +377,37 @@ exports.recoverPassword = async (req, res) => {
     }
 
     res.json({ message: 'If your ID exists, a password reset link has been sent to your email' });
+    
+    // Only log if user exists
+    if (user) {
+      await loggingService.logAuth(
+        'password_recovery_request',
+        user,
+        `Password recovery requested for user ${user.bilkent_id}`,
+        { email: user.email },
+        req
+      );
+    }
   } catch (error) {
     console.error('Password recovery error:', error);
-    res.status(500).json({ message: 'Server error during password recovery', error: error.message });
+
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during password recovery',
+      req
+    );
+    
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during password recovery' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
+
   }
 };
 
@@ -363,9 +465,38 @@ exports.resetPassword = async (req, res) => {
     delete resetTokens[bilkentId];
 
     res.json({ message: 'Password has been reset successfully' });
+    
+    // Log the password reset event
+    const user = await User.findByBilkentId(bilkentId);
+    if (user) {
+      await loggingService.logAuth(
+        'password_reset',
+        user,
+        `Password reset successful for user ${bilkentId}`,
+        { timestamp: new Date().toISOString() },
+        req
+      );
+    }
   } catch (error) {
     console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error during password reset', error: error.message });
+
+    
+    // Log the error
+    await loggingService.logError(
+      'user',
+      error,
+      null,
+      'Error during password reset',
+      req
+    );
+    
+    // Only include detailed errors in development
+    const errorResponse = { message: 'Server error during password reset' };
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+    }
+    res.status(500).json(errorResponse);
+
   }
 };
 
@@ -373,8 +504,21 @@ exports.resetPassword = async (req, res) => {
  * Log out a user (client-side implementation)
  * @route POST /api/auth/logout
  */
-exports.logout = (req, res) => {
+
+exports.logout = async (req, res) => {
   // JWT tokens are stateless, so we can't invalidate them on the server
   // The client should remove the token from storage
   res.json({ message: 'Logged out successfully' });
+  
+  // Log the logout event if we have user info
+  if (req.user) {
+    await loggingService.logAuth(
+      'logout',
+      req.user,
+      `User ${req.user.bilkent_id} logged out`,
+      { timestamp: new Date().toISOString() },
+      req
+    );
+  }
+
 };
