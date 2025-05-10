@@ -113,32 +113,62 @@ class Task {
 
   static async update(taskId, taskData) {
     try {
-      const { title, description, task_type, course_id, due_date, duration, status } = taskData;
+      // Fields allowed for direct update from taskData (excluding id, created_at, updated_at, etc.)
+      const allowedFields = ['title', 'description', 'task_type', 'course_id', 'due_date', 'duration', 'status'];
+      const updates = {};
+      const queryParams = [];
+      let setClause = '';
+
+      for (const field of allowedFields) {
+        if (taskData.hasOwnProperty(field)) {
+          updates[field] = taskData[field];
+          if (setClause !== '') setClause += ', ';
+          setClause += `${field} = ?`;
+          queryParams.push(taskData[field]);
+        }
+      }
+
+      // Always update the updated_at timestamp
+      if (setClause !== '') setClause += ', ';
+      setClause += 'updated_at = CURRENT_TIMESTAMP';
+      // No need to add CURRENT_TIMESTAMP to queryParams, SQL handles it
+
+      if (queryParams.length === 0 && setClause.includes('updated_at')) {
+        // Only updating updated_at, no other fields changed
+        // Or if queryParams is empty (no valid fields were in taskData to update)
+        // We must ensure at least one field is being set if we proceed
+      } else if (queryParams.length === 0) {
+         // No valid fields to update, and not even updated_at was added somehow (should not happen with logic above)
+        console.log('[Task.update] No fields to update for task:', taskId);
+        return false; // Or throw an error: new Error('No valid fields provided for update');
+      }
       
-      const [result] = await db.query(
-        `UPDATE tasks
-        SET title = ?, description = ?, task_type = ?, course_id = ?, due_date = ?, duration = ?, status = ?
-        WHERE id = ?`,
-        [title, description, task_type, course_id, due_date, duration, status, taskId]
-      );
+      queryParams.push(taskId); // Add taskId for the WHERE clause
+
+      const sql = `UPDATE tasks SET ${setClause} WHERE id = ?`;
       
-      // Update task assignments if needed
-      if (taskData.assignees && taskData.assignees.length > 0) {
+      const [result] = await db.query(sql, queryParams);
+      
+      // Update task assignments if 'assignees' is provided
+      if (taskData.hasOwnProperty('assignees') && Array.isArray(taskData.assignees)) {
         // Remove existing assignments
         await db.query('DELETE FROM task_assignments WHERE task_id = ?', [taskId]);
         
-        // Add new assignments
-        for (const userId of taskData.assignees) {
-          await db.query(
-            `INSERT INTO task_assignments (task_id, user_id)
-            VALUES (?, ?)`,
-            [taskId, userId]
-          );
+        // Add new assignments (only if assignees array is not empty)
+        if (taskData.assignees.length > 0) {
+          for (const userId of taskData.assignees) {
+            await db.query(
+              `INSERT INTO task_assignments (task_id, user_id)
+              VALUES (?, ?)`,
+              [taskId, userId]
+            );
+          }
         }
       }
       
       return result.affectedRows > 0;
     } catch (error) {
+      console.error('[Task.update] Error:', error);
       throw error;
     }
   }
