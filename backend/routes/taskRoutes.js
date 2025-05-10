@@ -3,7 +3,8 @@
 const express = require('express');
 const router = express.Router();
 const taskController = require('../controllers/taskController');
-const { protect, requirePermission } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
+const { requirePermission } = require('../middleware/permissionMiddleware');
 const { PERMISSIONS } = require('../config/roles');
 
 // All routes are protected

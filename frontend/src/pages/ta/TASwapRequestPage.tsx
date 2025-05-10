@@ -2,7 +2,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./TASwapRequestPage.css";
 import { useState, useEffect } from "react";
 import SwapRequestDetailsModal from "./SwapRequestDetailsModal";
-import { SwapRequest } from "./types";
+import { SwapRequest } from "../../types";
 import { useNavigate } from "react-router-dom"; // En üste ekle
 
 type FilterType = "All" | "Pending" | "Accepted" | "Declined";
@@ -270,6 +270,61 @@ const TASwapRequestPage = () => {
     return list.filter(
       (request) => activeFilter === "All" || request.status === activeFilter
     );
+  };
+
+  const handleSendRequest = () => {
+    const selectedAssignment = assignments.find(
+      (a: { id: string; label: string }) => a.id === newSwap.assignmentId
+    );
+
+    if (!selectedAssignment) {
+      alert("Please select your task.");
+      return;
+    }
+
+    const nextId =
+      requests.myRequests.length > 0
+        ? Math.max(...requests.myRequests.map((r) => r.id)) + 1
+        : 1;
+
+    const newRequestData: SwapRequest = {
+      id: nextId,
+      title: selectedAssignment.label.split(" - ")[0],
+      reason: newSwap.reason, // Assuming reason comes from newSwap state
+      status: "Pending",
+      yourTask: {
+        course: selectedAssignment.label.split(" - ")[0],
+        task: "", // Populate as needed
+        date: selectedAssignment.label.split(" - ")[1].split(",")[0].trim(),
+        time: selectedAssignment.label.split(" - ")[1].split(",")[1].trim(),
+        location: "", // Populate as needed
+        status: "Pending", // Initial status of the task itself
+        requester: "You", // Or get current user ID/name
+        with: newSwap.targetTa, // The TA this request is for
+      },
+      proposedTask: {
+        ta: newSwap.targetTa,
+        // These details would typically be for the *targetTa's* task they are offering
+        // For now, let's assume it mirrors the structure, but might need actual data
+        course: "", // Placeholder - needs data for target TA's task
+        task: "",   // Placeholder
+        date: "",   // Placeholder
+        time: "",   // Placeholder
+      },
+      timeline: {
+        sent: new Date().toISOString(),
+        taResponse: "",
+        instructorApproval: "",
+      },
+    };
+
+    setRequests((prevRequests) => ({
+      ...prevRequests,
+      myRequests: [newRequestData, ...prevRequests.myRequests],
+    }));
+
+    setShowConfirmModal(false);
+    setShowNewSwapModal(false);
   };
 
   return (
@@ -680,48 +735,7 @@ const TASwapRequestPage = () => {
                 </button>
                 <button
                   className="btn btn-success"
-                  onClick={() => {
-                    const nextId =
-                      Math.max(0, ...requests.myRequests.map((r) => r.id)) + 1;
-                    const selectedAssignment = assignments.find(
-                      (a) => a.id === newSwap.assignmentId
-                    );
-                    const newRequest: SwapRequest = {
-                      id: nextId,
-                      title: selectedAssignment.label.split(" - ")[0], // Sadece başlık kısmını al
-                      status: "Pending",
-                      yourTask: {
-                        course: selectedAssignment.label.split(" - ")[0],
-                        task: "",
-                        date: selectedAssignment.label.split(" - ")[1].split(",")[0].trim(),
-                        time: selectedAssignment.label.split(" - ")[1].split(",")[1].trim(),
-                        location: "",
-                        status: "Pending",
-                        requester: "You",
-                        with: newSwap.targetTa,
-                      },
-                      proposedTask: {
-                        ta: newSwap.targetTa,
-                        course: selectedAssignment
-                          ? selectedAssignment.label
-                          : "",
-                        task: "",
-                        date: "",
-                        time: "",
-                      },
-                      timeline: {
-                        sent: new Date().toISOString(),
-                        taResponse: "",
-                        instructorApproval: "",
-                      },
-                    };
-                    setRequests((prev) => ({
-                      ...prev,
-                      myRequests: [newRequest, ...prev.myRequests],
-                    }));
-                    setShowConfirmModal(false);
-                    setShowNewSwapModal(false);
-                  }}
+                  onClick={handleSendRequest}
                 >
                   Yes
                 </button>
