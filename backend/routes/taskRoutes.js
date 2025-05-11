@@ -13,6 +13,7 @@ router.use(protect);
 // Protect using permission-based checks (from D1)
 router.get('/', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskController.getAllTasks);
 router.get('/upcoming', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskController.getUpcomingTasks);
+router.get('/course/:courseId', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskController.getTasksByCourse);
 router.get('/:id', requirePermission(PERMISSIONS.VIEW_ASSIGNMENTS), taskController.getTaskById);
 router.post('/', requirePermission(PERMISSIONS.CREATE_ASSIGNMENT), taskController.createTask);
 router.put('/:id', requirePermission(PERMISSIONS.UPDATE_ASSIGNMENT), taskController.updateTask);

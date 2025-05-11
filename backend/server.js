@@ -12,6 +12,9 @@ const taskRoutes = require('./routes/taskRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const swapRoutes = require('./routes/swapRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const db = require('./config/db');
 const loggingService = require('./services/LoggingService');
 const { errorLogger } = require('./middleware/auditLogger');
@@ -74,6 +77,9 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/swaps', swapRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Navigation routes that match the frontend navigation bar links
 app.use('/api', navigationRoutes);
