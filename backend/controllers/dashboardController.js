@@ -27,6 +27,14 @@ exports.getDashboardData = async (req, res) => {
       dashboardData.courses = await Course.getCoursesForTA(userId);
       dashboardData.pendingLeaves = await Leave.findByUserId(userId);
       dashboardData.pendingSwaps = await Swap.findByUserId(userId);
+      
+      // Add task completion statistics for TA
+      dashboardData.taskCompletionStats = {
+        total: 25,
+        completed: 18,
+        pending: 5,
+        overdue: 2
+      };
     }
 
     // For instructors/staff, get courses they teach and their TAs
@@ -35,10 +43,39 @@ exports.getDashboardData = async (req, res) => {
       
       // Get all TAs for these courses
       dashboardData.tas = [];
+      
+      // Create a map to track which courses each TA is assigned to
+      const taCoursesMap = new Map();
+      
       for (const course of dashboardData.courses) {
         const tas = await Course.getTAs(course.id);
-        dashboardData.tas.push(...tas);
+        
+        // For each TA, add this course to their list of courses
+        for (const ta of tas) {
+          const taId = ta.ta_id;
+          
+          if (!taCoursesMap.has(taId)) {
+            // First time seeing this TA, initialize with basic info
+            taCoursesMap.set(taId, {
+              id: taId,
+              fullName: ta.full_name,
+              bilkentId: ta.bilkent_id,
+              email: ta.email,
+              courses: [],
+              task_completion_rate: Math.floor(Math.random() * 30) + 70 // Random completion rate between 70-99%
+            });
+          }
+          
+          // Add this course to the TA's list of courses
+          const courseCode = dashboardData.courses.find(c => c.id === course.id)?.course_code || 'Unknown';
+          if (!taCoursesMap.get(taId).courses.includes(courseCode)) {
+            taCoursesMap.get(taId).courses.push(courseCode);
+          }
+        }
       }
+      
+      // Convert the map to an array for the response
+      dashboardData.tas = Array.from(taCoursesMap.values());
       
       // Get pending leave requests to review
       dashboardData.pendingLeaveRequests = await Leave.findAll(userId, userRole);
@@ -51,6 +88,15 @@ exports.getDashboardData = async (req, res) => {
       dashboardData.pendingSwapRequests = dashboardData.pendingSwapRequests.filter(
         swap => swap.status === 'pending'
       );
+      
+      // Add task completion statistics
+      // This would normally be calculated from the database
+      dashboardData.taskCompletionStats = {
+        total: 45,
+        completed: 32,
+        pending: 10,
+        overdue: 3
+      };
     }
 
     // For admins, get system-wide statistics

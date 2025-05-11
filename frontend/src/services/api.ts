@@ -19,6 +19,24 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`);
+    
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    
+    console.log('Token from localStorage:', token ? 'Token exists' : 'No token found');
+    
+    // If token exists, add it to the Authorization header
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers['Authorization'] = `Bearer ${token}`;
+      console.log('Added Authorization header with Bearer token');
+    } else {
+      console.log('No token available to add to request');
+    }
+    
+    // Log the final headers for debugging
+    console.log('Request headers:', config.headers);
+    
     return config;
   },
   (error) => {

@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
       
-      console.log('Attempting login with credentials:', { bilkent_id: credentials.bilkent_id, passwordLength: credentials.password.length });
+      console.log('Attempting login with credentials:', { bilkentId: credentials.bilkentId, passwordLength: credentials.password.length });
       console.log('API URL:', API_URL);
       
       // Use the authService instead of direct axios call

@@ -8,7 +8,7 @@ export const authService = {
     try {
       // Convert snake_case to camelCase for backend compatibility
       const backendCredentials = {
-        bilkentId: credentials.bilkent_id,
+        bilkentId: credentials.bilkentId,
         password: credentials.password
       };
       
@@ -25,10 +25,11 @@ export const authService = {
         throw new Error('Invalid response from server. User data not found.');
       }
       
-      const { user } = response.data;
+      const { user, token } = response.data;
       
-      // Store user in localStorage
+      // Store user and token in localStorage
       localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
       
       return user;
     } catch (error: any) {
@@ -58,19 +59,21 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       await api.post('/auth/logout');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      // Clear user from localStorage
+      // Still remove the user and token from localStorage even if the API call fails
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
   },
   
   // Request password reset
-  requestPasswordReset: async (bilkent_id: string): Promise<void> => {
+  requestPasswordReset: async (bilkentId: string): Promise<void> => {
     try {
       // Convert snake_case to camelCase for backend compatibility
-      await api.post('/auth/recover-password', { bilkentId: bilkent_id });
+      await api.post('/auth/recover-password', { bilkentId });
     } catch (error) {
       console.error('Password reset request error:', error);
       throw error;

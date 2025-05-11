@@ -6,10 +6,17 @@ const { getPermissionsForRole } = require('../config/roles');
 
 exports.authenticate = async (req, res, next) => {
   try {
+    console.log('Auth headers:', req.headers);
+    
     // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.header('Authorization');
+    console.log('Authorization header:', authHeader);
+    
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Extracted token:', token ? `${token.substring(0, 15)}...` : 'No token');
 
     if (!token) {
+      console.log('No token found in request');
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
 

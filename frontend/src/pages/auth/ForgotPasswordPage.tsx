@@ -19,7 +19,7 @@ import GridItem from '../../components/common/GridItem';
 
 // Validation schema
 const validationSchema = yup.object({
-  bilkent_id: yup
+  bilkentId: yup
     .string()
     .required('Bilkent ID is required'),
 });
@@ -31,12 +31,12 @@ const ForgotPasswordPage: React.FC = () => {
   // Formik form handling
   const formik = useFormik({
     initialValues: {
-      bilkent_id: '',
+      bilkentId: '',
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       try {
-        await authService.requestPasswordReset(values.bilkent_id);
+        await authService.requestPasswordReset(values.bilkentId);
         setSubmitted(true);
         setError(null);
       } catch (error: any) {
@@ -118,16 +118,16 @@ const ForgotPasswordPage: React.FC = () => {
                 margin="normal"
                 required
                 fullWidth
-                id="bilkent_id"
+                id="bilkentId"
                 label="Bilkent ID"
-                name="bilkent_id"
+                name="bilkentId"
                 autoComplete="username"
                 autoFocus
-                value={formik.values.bilkent_id}
+                value={formik.values.bilkentId}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.bilkent_id && Boolean(formik.errors.bilkent_id)}
-                helperText={formik.touched.bilkent_id && formik.errors.bilkent_id}
+                error={formik.touched.bilkentId && Boolean(formik.errors.bilkentId)}
+                helperText={formik.touched.bilkentId && formik.errors.bilkentId}
               />
               
               <Button

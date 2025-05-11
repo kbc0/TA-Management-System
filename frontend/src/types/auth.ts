@@ -2,14 +2,14 @@ export type UserRole = 'ta' | 'staff' | 'department_chair' | 'admin';
 
 export interface User {
   id: number;
-  bilkent_id: string;
+  bilkentId: string; // Changed from bilkent_id to match backend
   email: string;
-  full_name: string;
+  fullName: string; // Changed from full_name to match backend
   role: UserRole;
   status?: 'active' | 'inactive' | 'on_leave';
   permissions?: string[];
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string; // Changed from created_at
+  updatedAt?: string; // Changed from updated_at
 }
 
 export interface AuthState {
@@ -20,7 +20,7 @@ export interface AuthState {
 }
 
 export interface LoginCredentials {
-  bilkent_id: string;
+  bilkentId: string;
   password: string;
 }
 

@@ -23,7 +23,7 @@ import {
   SwapHoriz as SwapHorizIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 // API base URL
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
@@ -48,9 +48,8 @@ const TADashboardPage: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/dashboard`, {
-          withCredentials: true,
-        });
+        // Use the configured api service that automatically includes auth token
+        const response = await api.get('/dashboard');
         setDashboardData(response.data);
         setError(null);
       } catch (error) {
@@ -160,7 +159,7 @@ const TADashboardPage: React.FC = () => {
     <Box sx={{ p: 2 }}>
       {/* Welcome message */}
       <Typography variant="h4" gutterBottom>
-        Welcome, {data.user?.full_name || 'TA'}
+        Welcome, {data.user?.fullName || 'TA'}
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Here's an overview of your teaching assistant activities

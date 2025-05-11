@@ -306,7 +306,7 @@ const MainLayout: React.FC = () => {
             sx={{ ml: 1 }}
           >
             <Avatar sx={{ bgcolor: 'secondary.main' }}>
-              {authState.user?.full_name.charAt(0) || 'U'}
+              {authState.user?.fullName.charAt(0) || 'U'}
             </Avatar>
           </IconButton>
         </Toolbar>

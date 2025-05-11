@@ -25,7 +25,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 import GridItem from '../../components/common/GridItem';
 
 // API base URL
@@ -57,9 +57,8 @@ const StaffDashboardPage: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/dashboard`, {
-          withCredentials: true,
-        });
+        // Use the configured api service that automatically includes auth token
+        const response = await api.get('/dashboard');
         setDashboardData(response.data);
         setError(null);
       } catch (error) {
@@ -129,22 +128,22 @@ const StaffDashboardPage: React.FC = () => {
     tas: [
       {
         id: 1,
-        full_name: 'John Smith',
-        bilkent_id: '21801234',
+        fullName: 'John Smith',
+        bilkentId: '21801234',
         courses: ['CS101', 'CS223'],
         task_completion_rate: 85,
       },
       {
         id: 2,
-        full_name: 'Emily Johnson',
-        bilkent_id: '21901234',
+        fullName: 'Emily Johnson',
+        bilkentId: '21901234',
         courses: ['CS101'],
         task_completion_rate: 92,
       },
       {
         id: 4,
-        full_name: 'Michael Brown',
-        bilkent_id: '22001234',
+        fullName: 'Michael Brown',
+        bilkentId: '22001234',
         courses: ['CS223', 'CS315'],
         task_completion_rate: 78,
       },
@@ -198,7 +197,7 @@ const StaffDashboardPage: React.FC = () => {
     <Box sx={{ p: 2 }}>
       {/* Welcome message */}
       <Typography variant="h4" gutterBottom>
-        Welcome, {data.user?.full_name || 'Instructor'}
+        Welcome, {data.user?.fullName || 'Instructor'}
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Here's an overview of your courses and teaching assistants
@@ -262,8 +261,8 @@ const StaffDashboardPage: React.FC = () => {
                         <PersonIcon />
                       </ListItemIcon>
                       <ListItemText
-                        primary={ta.full_name}
-                        secondary={`ID: ${ta.bilkent_id} • Courses: ${ta.courses.join(', ')}`}
+                        primary={ta.fullName}
+                        secondary={`ID: ${ta.bilkentId} • Courses: ${ta.courses.join(', ')}`}
                       />
                       <Box sx={{ width: '100px', mr: 2 }}>
                         <LinearProgress
