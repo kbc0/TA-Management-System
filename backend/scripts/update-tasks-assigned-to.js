@@ -38,9 +38,7 @@ async function updateTasksAssignedTo() {
   } catch (error) {
     console.error('Error updating tasks:', error);
   } finally {
-    // Close the database connection pool
-    await db.end();
-    process.exit(0);
+
   }
 }
 

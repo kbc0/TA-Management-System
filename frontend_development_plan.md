@@ -8,6 +8,12 @@ This document outlines the development plan for the TA Management System fronten
 2. **Staff (Instructors)**: Manage courses, assign TAs, create tasks, and review leave/swap requests
 3. **Administrators**: Full system access including user management, audit logs, and system configuration
 
+## Implementation Notes
+
+### Material-UI Grid Component Solution
+
+We encountered TypeScript errors with Material-UI's Grid component when using the `item` prop. To solve this issue, we created a custom `GridItem` component that uses Material-UI's Box component with flexbox properties to achieve the same layout functionality as Grid items. This approach avoids the TypeScript errors and provides a consistent interface for grid layouts throughout the application.
+
 ## Technology Stack
 
 - **Framework**: React.js with TypeScript

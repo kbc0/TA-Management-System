@@ -45,9 +45,10 @@ if (process.env.NODE_ENV === 'development' || !process.env.MAIL_HOST) {
  * @param {Array} required - List of required field names
  * @returns {Object} - Object containing validation results
  */
-const validateParams = (params, required) => {
+const validateParams = (params, required, options = {}) => {
   const missingFields = [];
   const errors = {};
+  const { skipPasswordValidation = false } = options;
   
   // Check for missing required fields
   required.forEach(field => {
@@ -61,8 +62,8 @@ const validateParams = (params, required) => {
     errors.email = 'Must use a Bilkent email address ending with @bilkent.edu.tr';
   }
   
-  // Password strength validation (if password is provided)
-  if (params.password && params.password.length < 6) {
+  // Password strength validation (if password is provided and not skipped)
+  if (!skipPasswordValidation && params.password && params.password.length < 6) {
     errors.password = 'Password must be at least 6 characters long';
   }
   
@@ -218,10 +219,11 @@ exports.login = async (req, res) => {
     const bilkentId = req.body.bilkentId || req.body.bilkent_id;
     const password = req.body.password;
 
-    // Validate input
+    // Validate input - skip password length validation for login
     const validation = validateParams(
       { bilkentId, password },
-      ['bilkentId', 'password']
+      ['bilkentId', 'password'],
+      { skipPasswordValidation: true }
     );
 
     if (!validation.isValid) {

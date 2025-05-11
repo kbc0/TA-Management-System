@@ -22,9 +22,10 @@ const { initDatabase } = require('./config/dbInit');
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins during development
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Allow frontend origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true // Allow cookies and credentials
 }));
 app.use(express.json());
 

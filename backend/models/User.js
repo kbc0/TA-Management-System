@@ -73,7 +73,14 @@ class User {
   }
 
   static async verifyPassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
+    // Check if the stored password is a bcrypt hash (starts with $2a$, $2b$, etc.)
+    if (hashedPassword && hashedPassword.startsWith('$2')) {
+      // Use bcrypt for hashed passwords
+      return await bcrypt.compare(plainPassword, hashedPassword);
+    } else {
+      // For plain text passwords, do a direct comparison
+      return plainPassword === hashedPassword;
+    }
   }
 }
 
