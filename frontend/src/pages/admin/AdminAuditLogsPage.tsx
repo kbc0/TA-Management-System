@@ -117,6 +117,56 @@ const AdminAuditLogsPage: React.FC = () => {
     }
   };
 
+  // Function to export logs as CSV
+  const exportLogs = async () => {
+    try {
+      setNotification({
+        open: true,
+        message: 'Exporting audit logs...',
+        severity: 'info',
+      });
+
+      // Build query parameters for filtering
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await api.get('/audit-logs/export', {
+        params,
+        responseType: 'blob'
+      });
+      
+      // Create a blob from the response data
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      
+      // Create a download link and trigger the download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get current date for filename
+      const date = new Date();
+      const formattedDate = date.toISOString().split('T')[0];
+      link.setAttribute('download', `audit-logs-${formattedDate}.csv`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setNotification({
+        open: true,
+        message: 'Audit logs exported successfully',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Error exporting audit logs:', error);
+      setNotification({
+        open: true,
+        message: 'Failed to export audit logs. Please try again.',
+        severity: 'error',
+      });
+    }
+  };
+
   // Function to filter logs based on search term
   const filterLogs = () => {
     if (!searchTerm.trim()) {
@@ -205,13 +255,7 @@ const AdminAuditLogsPage: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<DownloadIcon />}
-          onClick={() => {
-            setNotification({
-              open: true,
-              message: 'Export functionality will be implemented in the future.',
-              severity: 'info',
-            });
-          }}
+          onClick={exportLogs}
         >
           Export
         </Button>
