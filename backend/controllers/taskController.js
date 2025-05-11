@@ -2,6 +2,8 @@
 const Task = require('../models/Task');
 const { PERMISSIONS } = require('../config/roles');
 const { handleError } = require('../utils/errorHandler');
+const db = require('../config/db');
+const loggingService = require('../services/LoggingService');
 
 /**
  * Get all tasks based on user role
@@ -48,6 +50,34 @@ exports.getUpcomingTasks = async (req, res) => {
     res.json(tasks);
   } catch (error) {
     return handleError(error, 'task', req.user, 'Error fetching upcoming tasks', req, res);
+  }
+};
+
+/**
+ * Get tasks assigned to the current user
+ * @route GET /api/tasks/my-tasks
+ * @access Private
+ */
+exports.getMyTasks = async (req, res) => {
+  try {
+    // Query to get all tasks assigned to the current user
+    const [tasks] = await db.query(
+      `SELECT t.*, c.course_code, c.course_name
+       FROM tasks t
+       JOIN task_assignments ta ON t.id = ta.task_id
+       LEFT JOIN courses c ON t.course_id = c.course_code
+       WHERE ta.user_id = ?
+       ORDER BY t.due_date ASC`,
+      [req.user.id]
+    );
+    
+    if (tasks.length === 0) {
+      return res.status(200).json([]);
+    }
+    
+    res.json(tasks);
+  } catch (error) {
+    return handleError(error, 'task', req.user, 'Error fetching your tasks', req, res);
   }
 };
 
@@ -171,11 +201,9 @@ exports.deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
     
-    // Check permissions - only creator or admin can delete
-    const canDelete = req.user.permissions.includes(PERMISSIONS.DELETE_ASSIGNMENT) && 
-                      (task.created_by === req.user.id || req.user.role === 'admin');
-    
-    if (!canDelete) {
+    // Check permissions - any user with DELETE_ASSIGNMENT permission can delete
+    // This includes instructors (staff) who have been granted this permission
+    if (!req.user.permissions.includes(PERMISSIONS.DELETE_ASSIGNMENT)) {
       return res.status(403).json({ message: 'You do not have permission to delete this task' });
     }
     
@@ -188,5 +216,67 @@ exports.deleteTask = async (req, res) => {
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     return handleError(error, 'task', req.user, 'Error deleting task', req, res);
+  }
+};
+
+/**
+ * Get task statistics
+ * @route GET /api/tasks/statistics
+ * @access Private (requires VIEW_ASSIGNMENTS permission)
+ */
+exports.getTaskStatistics = async (req, res) => {
+  try {
+    // Check if user has permission to view tasks
+    if (!req.user.permissions.includes(PERMISSIONS.VIEW_ASSIGNMENTS)) {
+      return res.status(403).json({ message: 'You do not have permission to view task statistics' });
+    }
+    
+    // Get optional course_id filter
+    const courseId = req.query.course_id;
+    
+    // Build query with optional course filter
+    let query = `
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN due_date < NOW() AND status != 'completed' THEN 1 ELSE 0 END) as overdue,
+        SUM(CASE WHEN task_type = 'grading' THEN 1 ELSE 0 END) as grading,
+        SUM(CASE WHEN task_type = 'proctoring' THEN 1 ELSE 0 END) as proctoring,
+        SUM(CASE WHEN task_type = 'office_hours' THEN 1 ELSE 0 END) as office_hours,
+        SUM(CASE WHEN task_type = 'other' THEN 1 ELSE 0 END) as other
+      FROM tasks
+    `;
+    
+    const params = [];
+    
+    // Add course filter if provided
+    if (courseId && courseId !== 'all') {
+      query += ' WHERE course_id = ?';
+      params.push(courseId);
+    }
+    
+    // Execute the query
+    const [statistics] = await db.query(query, params);
+    
+    if (!statistics || statistics.length === 0) {
+      return res.status(404).json({ message: 'No task statistics found' });
+    }
+    
+    // Log the action
+    await loggingService.log({
+      action: 'task_statistics_viewed',
+      entity: 'task',
+      user_id: req.user?.bilkentId,
+      description: `User viewed task statistics`,
+      metadata: { 
+        user_role: req.user?.role,
+        course_id: courseId || 'all'
+      }
+    }, req);
+    
+    res.json(statistics[0]);
+  } catch (error) {
+    return handleError(error, 'task', req.user, 'Error fetching task statistics', req, res);
   }
 };

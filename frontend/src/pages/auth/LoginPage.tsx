@@ -1,152 +1,204 @@
-// src/pages/auth/LoginPage.tsx
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import "./LogInPage.css";
+import React, { useState } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import {
+  Avatar,
+  Button,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  Link,
+  Paper,
+  Box,
+  Grid,
+  Typography,
+  Alert,
+} from '@mui/material';
+import { LockOutlined as LockOutlinedIcon } from '@mui/icons-material';
+import { useFormik } from 'formik';
+import * as yup from 'yup';
+import { useAuth } from '../../contexts/AuthContext';
+import GridItem from '../../components/common/GridItem';
+
+// Validation schema
+const validationSchema = yup.object({
+  bilkentId: yup
+    .string()
+    .required('Bilkent ID is required'),
+  password: yup
+    .string()
+    .required('Password is required'),
+});
 
 const LoginPage: React.FC = () => {
-  const [bilkentID, setBilkentID] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { login, authState } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const [showError, setShowError] = useState(false);
 
-  const handleLogin = async (): Promise<void> => {
-    // Reset errors
-    setError("");
-    
-    // Validate input
-    if (!bilkentID || !password) {
-      setError("Please enter both Bilkent ID and password");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      // Call the backend API
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bilkentId: bilkentID, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+  // Formik form handling
+  const formik = useFormik({
+    initialValues: {
+      bilkentId: '',
+      password: '',
+      remember: false,
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values) => {
+      try {
+        await login({ bilkentId: values.bilkentId, password: values.password });
+        
+        // Navigate based on user role
+        if (authState.user) {
+          switch (authState.user.role) {
+            case 'ta':
+              navigate('/ta/dashboard');
+              break;
+            case 'staff':
+            case 'department_chair':
+              navigate('/staff/dashboard');
+              break;
+            case 'admin':
+              navigate('/admin/dashboard');
+              break;
+            default:
+              navigate('/');
+          }
+        }
+      } catch (error) {
+        setShowError(true);
+        console.error('Login error:', error);
       }
-
-      // Use the context login function to update auth state (this also handles localStorage)
-      login(data.token, data.user);
-
-      // Redirect based on user role
-      switch (data.user.role) {
-        case 'admin':
-          navigate("/admin/dashboard");
-          break;
-        case 'ta':
-          navigate("/ta/dashboard");
-          break;
-        case 'staff':
-          navigate("/staff/dashboard");
-          break;
-        case 'department_chair':
-          navigate("/chair/dashboard");
-          break;
-        case 'dean':
-          navigate("/dean/dashboard");
-          break;
-        default:
-          navigate("/dashboard");
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = (): void => {
-    setShowPassword((prev) => !prev);
-  };
+    },
+  });
 
   return (
-    <div className="login-background">
-      <div className="login-box">
-        <img
-          src="/bilkent-logo.png"
-          alt="Bilkent Logo"
-          className="login-logo"
-        />
-        <h2 className="login-title">TA Management System</h2>
-
-        <div className="input-group">
-          <label>Bilkent ID</label>
-          <input
-            type="text"
-            placeholder="Enter your Bilkent ID"
-            value={bilkentID}
-            onChange={(e) => setBilkentID(e.target.value)}
-            className={error ? "input-error" : ""}
-          />
-        </div>
-
-        <div className="input-group">
-          <label>Password</label>
-          <div className="password-wrapper">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={error ? "input-error" : ""}
+    <Grid container component="main" sx={{ height: '100vh' }}>
+      {/* Left side - Image */}
+      <Box
+        sx={{
+          flexGrow: 0,
+          flexBasis: { xs: 0, sm: '33.333%', md: '58.333%' },
+          backgroundImage: 'url(https://source.unsplash.com/random?university)',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: (t) =>
+            t.palette.mode === 'light' ? t.palette.grey[50] : t.palette.grey[900],
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      
+      {/* Right side - Login form */}
+      <Box
+        component={Paper}
+        elevation={6}
+        square
+        sx={{
+          flexGrow: 0,
+          flexBasis: { xs: '100%', sm: '66.666%', md: '41.666%' },
+        }}
+      >
+        <Box
+          sx={{
+            my: 8,
+            mx: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+            <LockOutlinedIcon />
+          </Avatar>
+          
+          <Typography component="h1" variant="h5">
+            TA Management System
+          </Typography>
+          
+          <Typography component="h2" variant="h6" sx={{ mt: 1 }}>
+            Sign in
+          </Typography>
+          
+          {/* Error alert */}
+          {showError && (
+            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+              Invalid Bilkent ID or password. Please try again.
+            </Alert>
+          )}
+          
+          {/* Login form */}
+          <Box component="form" noValidate onSubmit={formik.handleSubmit} sx={{ mt: 1, width: '100%' }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="bilkentId"
+              label="Bilkent ID"
+              name="bilkentId"
+              autoComplete="username"
+              autoFocus
+              value={formik.values.bilkentId}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.bilkentId && Boolean(formik.errors.bilkentId)}
+              helperText={formik.touched.bilkentId && formik.errors.bilkentId}
             />
-            <span
-              className="toggle-password"
-              onClick={togglePasswordVisibility}
-              role="button"
-              aria-label="Toggle password visibility"
+            
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && Boolean(formik.errors.password)}
+              helperText={formik.touched.password && formik.errors.password}
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="remember"
+                  color="primary"
+                  checked={formik.values.remember}
+                  onChange={formik.handleChange}
+                />
+              }
+              label="Remember me"
+            />
+            
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={formik.isSubmitting}
             >
-              {showPassword ? "🙈" : "👁️"}
-            </span>
-          </div>
-          {error && <p className="error-text">{error}</p>}
-        </div>
-
-        <button 
-          className="login-button" 
-          onClick={handleLogin} 
-          disabled={isLoading}
-        >
-          {isLoading ? "Logging in..." : "Login"}
-        </button>
-
-        <button
-          className="forgot-password"
-          onClick={() => navigate("/forgot-password")}
-          disabled={isLoading}
-        >
-          Forgot Password?
-        </button>
-        
-        <div style={{ marginTop: '20px' }}>
-          <span style={{ fontSize: '14px' }}>Don't have an account? </span>
-          <button
-            className="forgot-password"
-            onClick={() => navigate("/signup")}
-            style={{ marginTop: '0' }}
-            disabled={isLoading}
-          >
-            Sign Up
-          </button>
-        </div>
-      </div>
-    </div>
+              Sign In
+            </Button>
+            
+            <Grid container>
+              <GridItem xs>
+                <Link component={RouterLink} to="/forgot-password" variant="body2">
+                  Forgot password?
+                </Link>
+              </GridItem>
+            </Grid>
+            
+            <Box mt={5}>
+              <Typography variant="body2" color="text.secondary" align="center">
+                {'© '}
+                {new Date().getFullYear()}{' '}
+                TA Management System
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </Grid>
   );
 };
 

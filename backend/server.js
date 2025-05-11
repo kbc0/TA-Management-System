@@ -4,12 +4,17 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const authRoutes = require('./routes/authRoutes');
+const runAllImports = require("./scripts/index");
 const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const swapRoutes = require('./routes/swapRoutes');
+const navigationRoutes = require('./routes/navigationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const db = require('./config/db');
 const loggingService = require('./services/LoggingService');
 const { errorLogger } = require('./middleware/auditLogger');
@@ -17,9 +22,10 @@ const { initDatabase } = require('./config/dbInit');
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins during development
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Allow frontend origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true // Allow cookies and credentials
 }));
 app.use(express.json());
 
@@ -49,12 +55,16 @@ db.getConnection()
     } catch (error) {
       console.error('Failed to initialize audit logs:', error);
     }
-    // Initialize database tables
+
+// Initialize database tables and run import scripts
     try {
       await initDatabase();
+      await runAllImports(); 
+      console.log('✅ Data import completed at server startup');
     } catch (error) {
-      console.error('Failed to initialize database tables:', error);
+      console.error('Failed during DB init or data import:', error);
     }
+
   })
   .catch(err => {
     console.error('Database connection failed:', err);
@@ -68,6 +78,12 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/swaps', swapRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+// Navigation routes that match the frontend navigation bar links
+app.use('/api', navigationRoutes);
 
 // Simple health check endpoint
 app.get('/health', (req, res) => {

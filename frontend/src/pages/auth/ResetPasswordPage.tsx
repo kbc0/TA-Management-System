@@ -1,173 +1,201 @@
-// src/pages/auth/ResetPasswordPage.tsx
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import "../auth/LogInPage.css"; // Reuse the login CSS
+import React, { useState } from 'react';
+import { useNavigate, Link as RouterLink, useParams } from 'react-router-dom';
+import {
+  Avatar,
+  Button,
+  TextField,
+  Link,
+  Paper,
+  Box,
+  Grid,
+  Typography,
+  Alert,
+} from '@mui/material';
+import { LockOutlined as LockOutlinedIcon } from '@mui/icons-material';
+import { useFormik } from 'formik';
+import * as yup from 'yup';
+import authService from '../../services/authService';
+import GridItem from '../../components/common/GridItem';
+
+// Validation schema
+const validationSchema = yup.object({
+  password: yup
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+    )
+    .required('Password is required'),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref('password')], 'Passwords must match')
+    .required('Confirm password is required'),
+});
 
 const ResetPasswordPage: React.FC = () => {
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [token, setToken] = useState<string>("");
-  const [bilkentId, setBilkentId] = useState<string>("");
-  
+  const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Get token and ID from the URL
-    const searchParams = new URLSearchParams(location.search);
-    const id = searchParams.get('id');
-    const resetToken = location.pathname.split('/')[2]; // Assuming the URL is /reset-password/:token
-    
-    if (!id || !resetToken) {
-      setError("Invalid reset link. Please request a new one.");
-      return;
-    }
-    
-    setBilkentId(id);
-    setToken(resetToken);
-  }, [location]);
-
-  const handleSubmit = async (): Promise<void> => {
-    // Reset messages
-    setError("");
-    setMessage("");
-
-    // Validation
-    if (!password || !confirmPassword) {
-      setError("Please enter and confirm your new password");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      // Call the backend API
-      const response = await fetch('http://localhost:5001/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          bilkentId,
-          newPassword: password
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Password reset failed');
+  // Formik form handling
+  const formik = useFormik({
+    initialValues: {
+      password: '',
+      confirmPassword: '',
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values) => {
+      try {
+        if (!token) {
+          setError('Invalid reset token. Please try again or request a new reset link.');
+          return;
+        }
+        
+        await authService.resetPassword(token, values.password);
+        setSuccess(true);
+        setError(null);
+        
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } catch (error) {
+        setError('Failed to reset password. The link may have expired or is invalid.');
+        console.error('Password reset error:', error);
       }
-
-      setMessage("Password has been reset successfully. Redirecting to login...");
-      // After a delay, redirect to login
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = (): void => {
-    setShowPassword((prev) => !prev);
-  };
+    },
+  });
 
   return (
-    <div className="login-background">
-      <div className="login-box">
-        <img
-          src="/bilkent-logo.jpg"
-          alt="Bilkent Logo"
-          className="login-logo"
-        />
-        <h2 className="login-title">Reset Password</h2>
-
-        {error && error.includes("Invalid reset link") ? (
-          <div>
-            <p className="error-text">{error}</p>
-            <button
-              className="login-button"
-              onClick={() => navigate("/forgot-password")}
-              style={{ marginTop: '20px' }}
-            >
-              Request New Link
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="input-group">
-              <label>New Password</label>
-              <div className="password-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={error ? "input-error" : ""}
-                />
-                <span
-                  className="toggle-password"
-                  onClick={togglePasswordVisibility}
-                  role="button"
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? "🙈" : "👁️"}
-                </span>
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label>Confirm New Password</label>
-              <div className="password-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={error ? "input-error" : ""}
-                />
-              </div>
-            </div>
-
-            {error && <p className="error-text">{error}</p>}
-            {message && <p style={{ color: 'green', marginBottom: '15px' }}>{message}</p>}
-
-            <button 
-              className="login-button" 
-              onClick={handleSubmit}
-              disabled={isLoading || message !== ""}
-            >
-              {isLoading ? "Resetting..." : "Reset Password"}
-            </button>
-          </>
-        )}
-
-        <button
-          className="forgot-password"
-          onClick={() => navigate("/")}
+    <Grid container component="main" sx={{ height: '100vh' }}>
+      {/* Left side - Image */}
+      <Box
+        sx={{
+          flexGrow: 0,
+          flexBasis: { xs: 0, sm: '33.333%', md: '58.333%' },
+          backgroundImage: 'url(https://source.unsplash.com/random?university)',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: (t) =>
+            t.palette.mode === 'light' ? t.palette.grey[50] : t.palette.grey[900],
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      
+      {/* Right side - Reset password form */}
+      <Box
+        component={Paper}
+        elevation={6}
+        square
+        sx={{
+          flexGrow: 0,
+          flexBasis: { xs: '100%', sm: '66.666%', md: '41.666%' },
+        }}
+      >
+        <Box
+          sx={{
+            my: 8,
+            mx: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
         >
-          Back to Login
-        </button>
-      </div>
-    </div>
+          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+            <LockOutlinedIcon />
+          </Avatar>
+          
+          <Typography component="h1" variant="h5">
+            TA Management System
+          </Typography>
+          
+          <Typography component="h2" variant="h6" sx={{ mt: 1 }}>
+            Reset Password
+          </Typography>
+          
+          {/* Success message */}
+          {success && (
+            <Alert severity="success" sx={{ mt: 2, width: '100%' }}>
+              Password reset successful! Redirecting to login page...
+            </Alert>
+          )}
+          
+          {/* Error message */}
+          {error && (
+            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+              {error}
+            </Alert>
+          )}
+          
+          {/* Form */}
+          {!success && (
+            <Box component="form" noValidate onSubmit={formik.handleSubmit} sx={{ mt: 1, width: '100%' }}>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Enter your new password below.
+              </Typography>
+              
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="New Password"
+                type="password"
+                id="password"
+                autoComplete="new-password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.password && Boolean(formik.errors.password)}
+                helperText={formik.touched.password && formik.errors.password}
+              />
+              
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="confirmPassword"
+                label="Confirm New Password"
+                type="password"
+                id="confirmPassword"
+                autoComplete="new-password"
+                value={formik.values.confirmPassword}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
+                helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+              />
+              
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+                disabled={formik.isSubmitting}
+              >
+                Reset Password
+              </Button>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Link component={RouterLink} to="/login" variant="body2">
+                  Back to Sign In
+                </Link>
+              </Box>
+            </Box>
+          )}
+          
+          <Box mt={5}>
+            <Typography variant="body2" color="text.secondary" align="center">
+              {'© '}
+              {new Date().getFullYear()}{' '}
+              TA Management System
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Grid>
   );
 };
 

@@ -6,9 +6,16 @@ const { auditLogger } = require('../middleware/auditLogger');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Apply authentication middleware to all routes
-// Assuming you have a middleware to check for admin role
+// Allow users with admin role to access audit logs
 router.use(authMiddleware.authenticate);
-router.use(authMiddleware.authorize(['admin']));
+// Fix: use lowercase 'admin' to match the actual role name in the system
+router.use((req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  }
+});
 
 // Apply audit logging middleware
 router.use(auditLogger({

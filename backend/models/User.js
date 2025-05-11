@@ -7,7 +7,7 @@ class User {
   static async findById(id) {
     try {
       const [rows] = await db.query(
-        'SELECT id, bilkent_id, email, full_name, role FROM users WHERE id = ?',
+        'SELECT id, bilkent_id, email, full_name, role, password, created_at, updated_at FROM users WHERE id = ?',
         [id]
       );
       return rows[0];
@@ -73,7 +73,14 @@ class User {
   }
 
   static async verifyPassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
+    // Check if the stored password is a bcrypt hash (starts with $2a$, $2b$, etc.)
+    if (hashedPassword && hashedPassword.startsWith('$2')) {
+      // Use bcrypt for hashed passwords
+      return await bcrypt.compare(plainPassword, hashedPassword);
+    } else {
+      // For plain text passwords, do a direct comparison
+      return plainPassword === hashedPassword;
+    }
   }
 }
 
@@ -107,6 +114,43 @@ User.updateRole = async (userId, newRole) => {
     const [result] = await db.query(
       'UPDATE users SET role = ? WHERE id = ?',
       [newRole, userId]
+    );
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Update user profile
+User.updateProfile = async (userId, updateFields) => {
+  try {
+    if (Object.keys(updateFields).length === 0) {
+      return false;
+    }
+    
+    // Construct the SQL query dynamically based on the fields to update
+    const fields = Object.keys(updateFields);
+    const values = Object.values(updateFields);
+    
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    
+    const [result] = await db.query(
+      `UPDATE users SET ${setClause}, updated_at = NOW() WHERE id = ?`,
+      [...values, userId]
+    );
+    
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Update user password by ID
+User.updatePassword = async (userId, newHashedPassword) => {
+  try {
+    const [result] = await db.query(
+      'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?',
+      [newHashedPassword, userId]
     );
     return result.affectedRows > 0;
   } catch (error) {

@@ -6,10 +6,17 @@ const { getPermissionsForRole } = require('../config/roles');
 
 exports.authenticate = async (req, res, next) => {
   try {
+    console.log('Auth headers:', req.headers);
+    
     // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.header('Authorization');
+    console.log('Authorization header:', authHeader);
+    
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Extracted token:', token ? `${token.substring(0, 15)}...` : 'No token');
 
     if (!token) {
+      console.log('No token found in request');
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
@@ -26,11 +33,12 @@ exports.authenticate = async (req, res, next) => {
     // Get permissions for the user's role
     const permissions = getPermissionsForRole(user.role);
     
-    // Add user to request object
+    // Add user to request object (exclude sensitive fields like password)
     req.user = {
       id: user.id,
       bilkentId: user.bilkent_id,
       email: user.email,
+      fullName: user.full_name,
       role: user.role,
       permissions: permissions
     };
@@ -119,10 +127,12 @@ exports.getCurrentUser = async (req, res) => {
     res.json({
       user: {
         id: user.id,
-        bilkentId: user.bilkent_id,
+        bilkent_id: user.bilkent_id,
         email: user.email,
-        fullName: user.full_name,
+        full_name: user.full_name,
         role: user.role,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
         permissions: user.permissions
       }
     });

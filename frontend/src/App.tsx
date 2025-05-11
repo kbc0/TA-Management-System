@@ -1,230 +1,176 @@
-// src/App.tsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import Navigation from './components/common/Navigation';
-import { useState } from 'react';
-import { useAuth } from './context/AuthContext';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
-// Auth Pages
+// Theme configuration
+import theme from './config/theme';
+
+// Context providers
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// Layouts
+import MainLayout from './layouts/MainLayout';
+
+// Auth pages
 import LoginPage from './pages/auth/LoginPage';
-import SignupPage from './pages/auth/SignupPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
-// Dashboard Pages
-import TADashboard from './pages/ta/Dashboard';
-import TasksPage from './pages/tasks/TasksPage';
-import TaskDashboard from './pages/tasks/TaskDashboard';
-import TaskDetail from './components/tasks/TaskDetail';
-import TaskForm from './components/tasks/TaskForm';
-import SwapEligibleTargets from './components/swap/SwapEligibleTargets';
+// Role-specific dashboard pages
+import TADashboardPage from './pages/ta/TADashboardPage';
+import TACoursesPage from './pages/ta/TACoursesPage';
+import TATasksPage from './pages/ta/TATasksPage';
+import TALeavesPage from './pages/ta/TALeavesPage';
+import TASwapsPage from './pages/ta/TASwapsPage';
+import TAProfilePage from './pages/ta/TAProfilePage';
+import StaffDashboardPage from './pages/staff/StaffDashboardPage';
+import StaffCoursesPage from './pages/staff/StaffCoursesPage';
+import StaffTasksPage from './pages/staff/StaffTasksPage';
+import StaffTAsPage from './pages/staff/StaffTAsPage';
+import StaffLeavesPage from './pages/staff/StaffLeavesPage';
+import StaffSwapsPage from './pages/staff/StaffSwapsPage';
+import StaffEvaluationsPage from './pages/staff/StaffEvaluationsPage';
+import StaffProfilePage from './pages/staff/StaffProfilePage';
+import StaffReportsPage from './pages/staff/StaffReportsPage';
+import StaffAssignTAPage from './pages/staff/StaffAssignTAPage';
 
-// Import new components
-import LeaveApprovalDashboard from './components/leave/LeaveApprovalDashboard';
-import LeaveStatisticsDashboard from './components/leave/LeaveStatisticsDashboard';
-import UserReportDashboard from './components/reports/UserReportDashboard';
+// Admin pages
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminCoursesPage from './pages/admin/AdminCoursesPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
-// Placeholder UserProfilePage component
-const UserProfilePage = () => {
-  const { user } = useAuth();
-  return (
-    <div style={{ padding: '20px', marginTop: '70px' }}>
-      <h2>User Profile</h2>
-      {user ? (
-        <>
-          <p><strong>Full Name:</strong> {user.fullName}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Role:</strong> {user.role}</p>
-          <p><strong>Bilkent ID:</strong> {user.bilkentId}</p>
-        </>
-      ) : (
-        <p>Loading user data...</p>
-      )}
-    </div>
-  );
-};
+// Common components
+import ProtectedRoute from './components/common/ProtectedRoute';
 
-// Placeholder LeaveRequestForm component
-const LeaveRequestForm = () => {
-  return (
-    <div style={{ padding: '20px', marginTop: '70px' }}>
-      <h2>Request Leave of Absence</h2>
-      <p>This is where the leave request form will go.</p>
-      {/* TODO: Implement actual form */}
-    </div>
-  );
-};
+// Role types
+import { UserRole } from './types/auth';
 
-// Add this SwapDemo component
-const SwapDemo = () => {
-  const [showSwapModal, setShowSwapModal] = useState<boolean>(false);
-  const [selectedTarget, setSelectedTarget] = useState<number | null>(null);
+// Not Found page
+const NotFoundPage = () => (
+  <div style={{ padding: '2rem', textAlign: 'center' }}>
+    <h1>404 - Page Not Found</h1>
+    <p>The page you are looking for does not exist.</p>
+  </div>
+);
 
-  const handleSelect = (targetId: number) => {
-    setSelectedTarget(targetId);
-    setShowSwapModal(false);
-    alert(`Selected target: ${targetId}`);
+// App Routes component - uses auth context
+const AppRoutes = () => {
+  const { authState } = useAuth();
+  const { isAuthenticated, user } = authState;
+
+  // Helper function to redirect based on user role
+  const getDashboardPath = (role?: UserRole) => {
+    switch (role) {
+      case 'admin':
+        return '/admin/dashboard';
+      case 'staff':
+        return '/staff/dashboard';
+      case 'ta':
+        return '/ta/dashboard';
+      default:
+        return '/login';
+    }
   };
 
   return (
-    <div style={{padding: '20px', marginTop: '60px'}}>
-      <h2>Swap Eligible Targets Demo</h2>
-      <p>This is a demo of the SwapEligibleTargets component.</p>
-      {selectedTarget && (
-        <p>You selected target ID: {selectedTarget}</p>
-      )}
-      <button
-        onClick={() => setShowSwapModal(true)}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#0074e4',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={isAuthenticated ? <Navigate to={getDashboardPath(user?.role)} /> : <LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      
+      {/* Redirect root to appropriate dashboard or login */}
+      <Route path="/" element={isAuthenticated ? <Navigate to={getDashboardPath(user?.role)} /> : <Navigate to="/login" />} />
+      
+      {/* Protected routes with MainLayout */}
+      {/* TA Routes */}
+      <Route
+        path="/ta"
+        element={
+          <ProtectedRoute allowedRoles={['ta']} />
+        }
       >
-        Open Swap Dialog
-      </button>
-
-      {showSwapModal && (
-        <SwapEligibleTargets
-          assignmentId={1}
-          assignmentType="task"
-          onSelectTarget={handleSelect}
-          onCancel={() => setShowSwapModal(false)}
-        />
-      )}
-    </div>
+        <Route element={<MainLayout />}>
+          <Route path="dashboard" element={<TADashboardPage />} />
+          <Route path="courses" element={<TACoursesPage />} />
+          <Route path="tasks" element={<TATasksPage />} />
+          <Route path="leaves" element={<TALeavesPage />} />
+          <Route path="leaves/new" element={<TALeavesPage />} />
+          <Route path="swaps" element={<TASwapsPage />} />
+          <Route path="swaps/new" element={<TASwapsPage />} />
+          <Route path="profile" element={<TAProfilePage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Route>
+      
+      {/* Staff (Instructor) Routes */}
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute allowedRoles={['staff']} />
+        }
+      >
+        <Route element={<MainLayout />}>
+          <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="courses" element={<StaffCoursesPage />} />
+          <Route path="courses/:id" element={<StaffCoursesPage />} />
+          <Route path="courses/:courseId/tasks" element={<StaffTasksPage />} />
+          <Route path="courses/:courseId/assign-ta" element={<StaffAssignTAPage />} />
+          <Route path="tasks" element={<StaffTasksPage />} />
+          <Route path="tasks/new" element={<StaffTasksPage />} />
+          <Route path="tas" element={<StaffTAsPage />} />
+          <Route path="tas/:taId/evaluate" element={<StaffEvaluationsPage />} />
+          <Route path="tas/:taId/tasks" element={<StaffTasksPage />} />
+          <Route path="leaves" element={<StaffLeavesPage />} />
+          <Route path="leaves/:id" element={<StaffLeavesPage />} />
+          <Route path="swaps" element={<StaffSwapsPage />} />
+          <Route path="swaps/:id" element={<StaffSwapsPage />} />
+          <Route path="evaluations" element={<StaffEvaluationsPage />} />
+          <Route path="profile" element={<StaffProfilePage />} />
+          <Route path="reports" element={<StaffReportsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Route>
+      
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin']} />
+        }
+      >
+        <Route element={<MainLayout />}>
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="courses" element={<AdminCoursesPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Route>
+      
+      {/* Catch all route */}
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 };
 
-// Placeholder for DefineExamPage
-const DefineExamPage = () => (
-  <div style={{ padding: '20px', marginTop: '70px' }}>
-    <h2>Define New Exam</h2>
-    <p>Form for defining exam details (course, date, proctors needed, etc.) will go here.</p>
-  </div>
-);
-
-// Placeholder for GenerateClassroomListsPage
-const GenerateClassroomListsPage = () => (
-  <div style={{ padding: '20px', marginTop: '70px' }}>
-    <h2>Generate Classroom Lists for Exams</h2>
-    <p>Interface for generating and printing student distribution lists for exam classrooms.</p>
-  </div>
-);
-
-// Placeholder for TASwapApprovalPage
-const TASwapApprovalPage = () => (
-  <div style={{ padding: '20px', marginTop: '70px' }}>
-    <h2>My Swap Requests</h2>
-    <p>List of swap requests I have initiated or need to approve/reject from other TAs.</p>
-  </div>
-);
-
-// Placeholder for StaffSwapApprovalPage
-const StaffSwapApprovalPage = () => (
-  <div style={{ padding: '20px', marginTop: '70px' }}>
-    <h2>Approve TA Swaps</h2>
-    <p>List of TA-to-TA agreed swaps pending final staff approval.</p>
-  </div>
-);
-
-const App: React.FC = () => {
+function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app-container">
-          <Navigation />
-          <div className="content">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-              
-              {/* Dashboard Routes for different roles */}
-              <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
-                <Route path="/ta/dashboard" element={<TADashboard />} />
-              </Route>
-              
-              <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
-                <Route path="/staff/dashboard" element={<TADashboard />} />
-              </Route>
-              
-              <Route element={<ProtectedRoute allowedRoles={['department_chair']} />}>
-                <Route path="/chair/dashboard" element={<TADashboard />} />
-              </Route>
-              
-              <Route element={<ProtectedRoute allowedRoles={['dean']} />}>
-                <Route path="/dean/dashboard" element={<TADashboard />} />
-              </Route>
-
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/admin/dashboard" element={<TADashboard />} />
-                <Route path="/admin" element={<div>Admin Section Page</div>} />
-              </Route>
-
-              {/* Profile Route - Accessible to all authenticated users */}
-              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin', 'dean']} />}>
-                <Route path="/profile" element={<UserProfilePage />} />
-              </Route>
-
-              {/* Task Management Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin']} />}>
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/tasks/dashboard" element={<TaskDashboard />} />
-                <Route path="/tasks/:id" element={<TaskDetail />} />
-                <Route path="/tasks/create" element={<TaskForm mode="create" />} />
-                <Route path="/tasks/:id/edit" element={<TaskForm mode="edit" />} />
-              </Route>
-              
-              {/* Leave Management Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'department_chair', 'staff']} />}>
-                <Route path="/leave/approval" element={<LeaveApprovalDashboard />} />
-              </Route>
-
-              <Route element={<ProtectedRoute allowedRoles={['ta', 'staff', 'department_chair', 'admin']} />}>
-                <Route path="/leave/statistics" element={<LeaveStatisticsDashboard />} />
-              </Route>
-
-              {/* TA specific leave request route */}
-              <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
-                <Route path="/leave/request" element={<LeaveRequestForm />} />
-              </Route>
-
-              {/* Swap Management Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['ta']} />}>
-                <Route path="/swaps/demo" element={<SwapDemo />} />
-                <Route path="/swaps/requests" element={<TASwapApprovalPage />} />
-              </Route>
-              <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin']} />}>
-                <Route path="/swaps/approve" element={<StaffSwapApprovalPage />} />
-              </Route>
-
-              {/* Reports Routes - Adding 'dean' */}
-              <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin', 'dean']} />}>
-                <Route path="/reports/users" element={<UserReportDashboard />} />
-              </Route>
-
-              {/* Exam Management Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['staff', 'department_chair', 'admin']} />}>
-                <Route path="/exams/define" element={<DefineExamPage />} />
-                <Route path="/exams/classroom-lists" element={<GenerateClassroomListsPage />} />
-              </Route>
-
-              {/* Catch all route - redirect to login */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        </div>
-      </Router>
-    </AuthProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
-};
+}
 
 export default App;

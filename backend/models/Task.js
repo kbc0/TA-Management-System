@@ -66,6 +66,18 @@ class Task {
 
   static async findUpcoming(userId, limit = 5) {
     try {
+      // First check if the user has any task assignments
+      const [assignmentCheck] = await db.query(
+        `SELECT COUNT(*) as count FROM task_assignments WHERE user_id = ?`,
+        [userId]
+      );
+      
+      // If no assignments exist, return an empty array instead of failing
+      if (assignmentCheck[0].count === 0) {
+        return [];
+      }
+      
+      // Get upcoming tasks for the user
       const [rows] = await db.query(
         `SELECT t.*, u.full_name as assigned_to_name
         FROM tasks t
@@ -78,7 +90,9 @@ class Task {
       );
       return rows;
     } catch (error) {
-      throw error;
+      console.error('Error in findUpcoming:', error);
+      // Return empty array instead of throwing error
+      return [];
     }
   }
 
@@ -241,6 +255,19 @@ class Task {
         return { success: false, message: 'Task not found' };
       }
       
+      // Allow admins to complete any task
+      if (userRole === 'admin') {
+        const [result] = await db.query(
+          'UPDATE tasks SET status = "completed", completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [taskId]
+        );
+        
+        return { 
+          success: result.affectedRows > 0, 
+          message: result.affectedRows > 0 ? 'Task marked as completed by admin' : 'Failed to update task'
+        };
+      }
+      
       // Allow task creator (instructors/staff) to complete the task
       if ((userRole === 'staff' || userRole === 'department_chair') && task.created_by === userId) {
         const [result] = await db.query(
@@ -289,6 +316,85 @@ class Task {
       
       return result.affectedRows > 0;
     } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Find all tasks with optional filtering
+   * @param {Object} filters - Optional filters
+   * @param {string} filters.courseId - Filter by course ID
+   * @param {string} filters.status - Filter by status
+   * @param {string} filters.taskType - Filter by task type
+   * @param {string} filters.assignedTo - Filter by assigned TA ID
+   * @param {string} filters.dueDate - Filter by due date
+   * @param {Object} options - Query options
+   * @param {number} options.limit - Maximum number of tasks to return
+   * @param {number} options.offset - Number of tasks to skip
+   * @returns {Promise<Array>} Array of task objects
+   */
+  static async findAllWithFilters(filters = {}, options = {}) {
+    try {
+      let query = `
+        SELECT t.*, u.full_name as assigned_to_name, c.full_name as creator_name
+        FROM tasks t
+        LEFT JOIN task_assignments ta ON t.id = ta.task_id
+        LEFT JOIN users u ON u.id = ta.user_id
+        LEFT JOIN users c ON c.id = t.created_by
+        WHERE 1=1
+      `;
+      
+      const queryParams = [];
+      
+      // Apply filters
+      if (filters.courseId) {
+        query += ' AND t.course_id = ?';
+        queryParams.push(filters.courseId);
+      }
+      
+      if (filters.status) {
+        query += ' AND t.status = ?';
+        queryParams.push(filters.status);
+      }
+      
+      if (filters.taskType) {
+        query += ' AND t.task_type = ?';
+        queryParams.push(filters.taskType);
+      }
+      
+      if (filters.assignedTo) {
+        query += ' AND ta.user_id = ?';
+        queryParams.push(filters.assignedTo);
+      }
+      
+      if (filters.dueDate) {
+        query += ' AND t.due_date = ?';
+        queryParams.push(filters.dueDate);
+      }
+      
+      if (filters.dueBefore) {
+        query += ' AND t.due_date <= ?';
+        queryParams.push(filters.dueBefore);
+      }
+      
+      if (filters.dueAfter) {
+        query += ' AND t.due_date >= ?';
+        queryParams.push(filters.dueAfter);
+      }
+      
+      // Apply sorting
+      query += ' ORDER BY t.due_date ASC';
+      
+      // Apply pagination
+      const limit = options.limit || 100;
+      const offset = options.offset || 0;
+      query += ' LIMIT ? OFFSET ?';
+      queryParams.push(limit, offset);
+      
+      const [rows] = await db.query(query, queryParams);
+      return rows;
+    } catch (error) {
+      console.error('Error finding tasks with filters:', error);
       throw error;
     }
   }

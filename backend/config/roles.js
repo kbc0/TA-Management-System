@@ -47,6 +47,9 @@ const ROLES = {
     UPDATE_EVALUATION: 'update_evaluation',
     DELETE_EVALUATION: 'delete_evaluation',
     
+    // Report management
+    VIEW_REPORTS: 'view_reports',
+    
     // System management
     VIEW_AUDIT_LOGS: 'view_audit_logs',
     MANAGE_SYSTEM_SETTINGS: 'manage_system_settings'
@@ -56,6 +59,7 @@ const ROLES = {
   const ROLE_PERMISSIONS = {
     // Teaching Assistant permissions
     [ROLES.TEACHING_ASSISTANT]: [
+      PERMISSIONS.VIEW_USERS,  // Added to allow TAs to fetch other TAs for swap requests
       PERMISSIONS.VIEW_COURSES,
       PERMISSIONS.VIEW_APPLICATIONS,
       PERMISSIONS.CREATE_APPLICATION,
@@ -66,6 +70,7 @@ const ROLES = {
     
     // Instructor permissions
     [ROLES.INSTRUCTOR]: [
+      PERMISSIONS.VIEW_USERS,  // Added to allow instructors to view user profiles
       PERMISSIONS.VIEW_COURSES,
       PERMISSIONS.VIEW_APPLICATIONS,
       PERMISSIONS.APPROVE_APPLICATION,
@@ -77,7 +82,8 @@ const ROLES = {
       PERMISSIONS.VIEW_EVALUATIONS,
       PERMISSIONS.CREATE_EVALUATION,
       PERMISSIONS.UPDATE_EVALUATION,
-      PERMISSIONS.DELETE_EVALUATION
+      PERMISSIONS.DELETE_EVALUATION,
+      PERMISSIONS.VIEW_REPORTS  // Added to allow instructors to view reports
     ],
     
     // Admin permissions
@@ -105,7 +111,8 @@ const ROLES = {
       PERMISSIONS.UPDATE_EVALUATION,
       PERMISSIONS.DELETE_EVALUATION,
       PERMISSIONS.VIEW_AUDIT_LOGS,
-      PERMISSIONS.MANAGE_SYSTEM_SETTINGS
+      PERMISSIONS.MANAGE_SYSTEM_SETTINGS,
+      PERMISSIONS.VIEW_REPORTS
     ],
     
     // Department Chair permissions
@@ -122,7 +129,7 @@ const ROLES = {
       PERMISSIONS.VIEW_AUDIT_LOGS
     ],
     
-    // Dean permissions (added for completeness)
+    // Dean permissions 
     [ROLES.DEAN]: [
       PERMISSIONS.VIEW_USERS,
       PERMISSIONS.VIEW_COURSES,

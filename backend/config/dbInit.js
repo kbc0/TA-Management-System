@@ -3,6 +3,8 @@ const pool = require('./db');
 const xlsx = require('xlsx');
 const User = require('../models/User');
 const path = require('path');
+const populateSampleData = require('../scripts/populate-sample-data');
+const updateTasksAssignedTo = require('../scripts/update-tasks-assigned-to');
 
 // SQL statements to create tables if they don't exist
 const createTablesQueries = {
@@ -68,10 +70,12 @@ const createTablesQueries = {
       duration INT NOT NULL COMMENT 'Duration in minutes',
       status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',
       created_by INT NOT NULL,
+      assigned_to INT DEFAULT NULL,
       created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       completed_at TIMESTAMP NULL DEFAULT NULL,
-      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
     )
   `,
   
@@ -261,6 +265,14 @@ async function initDatabase() {
     // Import sample users from Excel file
     const excelPath = path.join(__dirname, '../ta_management_sample_input.xlsx');
     await importUsersFromExcel(excelPath);
+    
+    // Populate database with sample data
+    console.log('Populating database with sample data...');
+    await populateSampleData();
+    
+    // Update tasks with assigned_to field
+    console.log('Updating tasks with assigned_to field...');
+    await updateTasksAssignedTo();
   } catch (error) {
     console.error('Database initialization error:', error);
     throw error;
