@@ -5,6 +5,7 @@ const Leave = require('../models/Leave');
 const Swap = require('../models/Swap');
 const User = require('../models/User');
 const loggingService = require('../services/LoggingService');
+const db = require('../config/db');
 
 /**
  * Get dashboard data for the current user
@@ -231,8 +232,7 @@ exports.getWorkloadReport = async (req, res) => {
       params.push(semester);
     }
     
-    // Only include active TAs
-    conditions.push('u.status = "active"');
+    // Only include TAs
     conditions.push('u.role = "ta"');
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

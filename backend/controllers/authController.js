@@ -240,16 +240,31 @@ exports.login = async (req, res) => {
     }
 
     // Find user by BilkentID
+    console.log(`Login attempt for bilkentId: ${bilkentId}`);
     const user = await User.findByBilkentId(bilkentId);
 
     // Check if user exists
     if (!user) {
+      console.log(`User not found with bilkentId: ${bilkentId}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    console.log(`User found:`, { 
+      id: user.id, 
+      bilkent_id: user.bilkent_id, 
+      role: user.role 
+    });
 
     // Verify password
+    console.log(`Verifying password for user ${user.bilkent_id}`);
+    console.log(`Password from request: ${password.substring(0, 3)}...`);
+    console.log(`Stored password hash: ${user.password.substring(0, 10)}...`);
+    
     const isPasswordValid = await User.verifyPassword(password, user.password);
+    console.log(`Password validation result: ${isPasswordValid}`);
+    
     if (!isPasswordValid) {
+      console.log(`Invalid password for user ${user.bilkent_id}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 

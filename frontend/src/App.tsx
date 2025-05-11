@@ -25,6 +25,15 @@ import TALeavesPage from './pages/ta/TALeavesPage';
 import TASwapsPage from './pages/ta/TASwapsPage';
 import TAProfilePage from './pages/ta/TAProfilePage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
+import StaffCoursesPage from './pages/staff/StaffCoursesPage';
+import StaffTasksPage from './pages/staff/StaffTasksPage';
+import StaffTAsPage from './pages/staff/StaffTAsPage';
+import StaffLeavesPage from './pages/staff/StaffLeavesPage';
+import StaffSwapsPage from './pages/staff/StaffSwapsPage';
+import StaffEvaluationsPage from './pages/staff/StaffEvaluationsPage';
+import StaffProfilePage from './pages/staff/StaffProfilePage';
+import StaffReportsPage from './pages/staff/StaffReportsPage';
+import StaffAssignTAPage from './pages/staff/StaffAssignTAPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 // Common components
@@ -91,7 +100,7 @@ const AppRoutes = () => {
         </Route>
       </Route>
       
-      {/* Staff Routes */}
+      {/* Staff (Instructor) Routes */}
       <Route
         path="/staff"
         element={
@@ -100,7 +109,22 @@ const AppRoutes = () => {
       >
         <Route element={<MainLayout />}>
           <Route path="dashboard" element={<StaffDashboardPage />} />
-          {/* Add more Staff routes here */}
+          <Route path="courses" element={<StaffCoursesPage />} />
+          <Route path="courses/:id" element={<StaffCoursesPage />} />
+          <Route path="courses/:courseId/tasks" element={<StaffTasksPage />} />
+          <Route path="courses/:courseId/assign-ta" element={<StaffAssignTAPage />} />
+          <Route path="tasks" element={<StaffTasksPage />} />
+          <Route path="tasks/new" element={<StaffTasksPage />} />
+          <Route path="tas" element={<StaffTAsPage />} />
+          <Route path="tas/:taId/evaluate" element={<StaffEvaluationsPage />} />
+          <Route path="tas/:taId/tasks" element={<StaffTasksPage />} />
+          <Route path="leaves" element={<StaffLeavesPage />} />
+          <Route path="leaves/:id" element={<StaffLeavesPage />} />
+          <Route path="swaps" element={<StaffSwapsPage />} />
+          <Route path="swaps/:id" element={<StaffSwapsPage />} />
+          <Route path="evaluations" element={<StaffEvaluationsPage />} />
+          <Route path="profile" element={<StaffProfilePage />} />
+          <Route path="reports" element={<StaffReportsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

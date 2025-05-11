@@ -1,6 +1,6 @@
 // backend/controllers/notificationController.js
 const Notification = require('../models/Notification');
-const loggingService = require('../services/loggingService');
+const loggingService = require('../services/LoggingService');
 
 /**
  * Get all notifications for the current user

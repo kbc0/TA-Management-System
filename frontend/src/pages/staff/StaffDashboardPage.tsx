@@ -478,58 +478,6 @@ const StaffDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
         </GridItem>
-
-        {/* Quick Actions */}
-        <GridItem xs={12}>
-          <Card>
-            <CardHeader title="Quick Actions" />
-            <Divider />
-            <CardContent>
-              <Grid container spacing={2}>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<SchoolIcon />}
-                    href="/staff/courses/new"
-                  >
-                    Add Course
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<PersonIcon />}
-                    href="/staff/tas/assign"
-                  >
-                    Assign TA
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<AssignmentIcon />}
-                    href="/staff/tasks/new"
-                  >
-                    Create Task
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<AssessmentIcon />}
-                    href="/staff/reports"
-                  >
-                    View Reports
-                  </Button>
-                </GridItem>
-              </Grid>
-            </CardContent>
-          </Card>
-        </GridItem>
       </Grid>
     </Box>
   );

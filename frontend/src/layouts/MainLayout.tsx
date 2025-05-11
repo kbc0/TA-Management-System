@@ -29,6 +29,7 @@ import {
   Settings as SettingsIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import NotificationBell from '../components/common/NotificationBell';
 import { styled } from '@mui/material/styles';
@@ -194,7 +195,7 @@ const MainLayout: React.FC = () => {
         },
         {
           text: 'Reports',
-          icon: <AssignmentIcon />,
+          icon: <AssessmentIcon />,
           path: '/staff/reports',
         },
       ];
