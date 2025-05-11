@@ -176,25 +176,125 @@ const AdminReportsPage: React.FC = () => {
   };
 
   // Export report data
-  const handleExport = async (format: 'csv' | 'pdf') => {
+  const handleExport = (format: 'csv' | 'pdf') => {
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      if (semester) params.append('semester', semester);
-      params.append('year', year.toString());
-      if (department) params.append('department', department);
-      params.append('format', format);
+      setNotification({
+        open: true,
+        message: `Preparing ${format.toUpperCase()} export...`,
+        severity: 'info',
+      });
       
-      const response = await api.get(`/reports/export/${activeTab}`, { params, responseType: 'blob' });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${activeTab}-report.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (format === 'csv') {
+        // Handle CSV export
+        let csvContent = '';
+        let fileName = '';
+        
+        if (activeTab === 'ta-performance') {
+          // Define headers for TA Performance report
+          const headers = [
+            'ID',
+            'Name',
+            'Bilkent ID',
+            'Email',
+            'Course Count',
+            'Courses',
+            'Total Tasks',
+            'Completed Tasks',
+            'Completion Rate',
+            'Avg. Completion Days',
+            'Leave Requests',
+            'Swap Requests'
+          ];
+          
+          // Convert TA data to CSV rows
+          const csvRows = taPerformanceData.map(ta => [
+            ta.id,
+            ta.full_name,
+            ta.bilkent_id,
+            ta.email,
+            ta.course_count,
+            `"${ta.courses}"`, // Escape courses list
+            ta.total_tasks,
+            ta.completed_tasks,
+            ta.completion_rate,
+            ta.avg_completion_days || 'N/A',
+            ta.leave_requests,
+            ta.swap_requests
+          ]);
+          
+          // Combine headers and rows
+          csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.join(','))
+          ].join('\n');
+          
+          fileName = `ta-performance-report-${semester || 'all'}-${year}.csv`;
+        } else if (activeTab === 'course-utilization') {
+          // Define headers for Course Utilization report
+          const headers = [
+            'ID',
+            'Course Code',
+            'Course Name',
+            'Semester',
+            'Department',
+            'Credits',
+            'TA Count',
+            'Total TA Hours',
+            'Hours per Credit',
+            'Task Count',
+            'Completed Tasks',
+            'Task Completion Rate'
+          ];
+          
+          // Convert course data to CSV rows
+          const csvRows = courseUtilizationData.map(course => [
+            course.id,
+            course.course_code,
+            `"${course.course_name}"`, // Escape course name
+            course.semester,
+            course.department,
+            course.credits,
+            course.ta_count,
+            course.total_ta_hours || 'N/A',
+            course.hours_per_credit || 'N/A',
+            course.task_count,
+            course.completed_tasks,
+            course.task_completion_rate
+          ]);
+          
+          // Combine headers and rows
+          csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.join(','))
+          ].join('\n');
+          
+          fileName = `course-utilization-report-${semester || 'all'}-${year}.csv`;
+        }
+        
+        // Create a blob from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        
+        // Create a download link and trigger the download
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        window.URL.revokeObjectURL(url);
+      } else if (format === 'pdf') {
+        // For PDF, we can't easily generate it in the browser
+        // Inform the user that this feature is not available
+        setNotification({
+          open: true,
+          message: 'PDF export is not available in the client-side version. Please use CSV export.',
+          severity: 'warning',
+        });
+        return;
+      }
       
       setNotification({
         open: true,
@@ -603,14 +703,6 @@ const AdminReportsPage: React.FC = () => {
           System Reports
         </Typography>
         <Box>
-          <Button
-            variant="outlined"
-            startIcon={<PdfIcon />}
-            onClick={() => handleExport('pdf')}
-            sx={{ mr: 1 }}
-          >
-            Export PDF
-          </Button>
           <Button
             variant="outlined"
             startIcon={<TableIcon />}
