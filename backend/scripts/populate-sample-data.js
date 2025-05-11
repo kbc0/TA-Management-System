@@ -422,10 +422,10 @@ async function createSampleTasks() {
   ];
   
   for (const task of sampleTasks) {
-    // Insert the task
+    // Insert the task with assigned_to field
     const [taskResult] = await db.query(
-      `INSERT INTO tasks (title, description, task_type, course_id, due_date, duration, status, created_by, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      `INSERT INTO tasks (title, description, task_type, course_id, due_date, duration, status, created_by, assigned_to, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         task.title,
         task.description,
@@ -434,13 +434,14 @@ async function createSampleTasks() {
         task.due_date,
         task.duration,
         task.status,
-        task.created_by
+        task.created_by,
+        task.assigned_to
       ]
     );
     
     const taskId = taskResult.insertId;
     
-    // Assign the task to the user
+    // Also maintain the task_assignments table for compatibility
     await db.query(
       `INSERT INTO task_assignments (task_id, user_id, assigned_at) 
        VALUES (?, ?, NOW())`,
