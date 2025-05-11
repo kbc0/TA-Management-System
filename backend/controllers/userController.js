@@ -253,9 +253,9 @@ exports.createUser = async (req, res) => {
     // Create user
     const [result] = await db.query(
       `INSERT INTO users 
-      (full_name, email, bilkent_id, role, department, password, max_hours) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [full_name, email, bilkent_id, role, department, hashedPassword, max_hours || null]
+      (full_name, email, bilkent_id, role, password, max_hours) 
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [full_name, email, bilkent_id, role, hashedPassword, max_hours || null]
     );
     
     if (!result.insertId) {
@@ -273,7 +273,6 @@ exports.createUser = async (req, res) => {
         fullName: full_name,
         email,
         role,
-        department,
         createdBy: req.user.bilkentId
       }
     }, req);
@@ -285,8 +284,7 @@ exports.createUser = async (req, res) => {
         full_name,
         email,
         bilkent_id,
-        role,
-        department
+        role
       }
     });
   } catch (error) {

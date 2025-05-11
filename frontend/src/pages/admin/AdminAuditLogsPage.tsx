@@ -118,7 +118,7 @@ const AdminAuditLogsPage: React.FC = () => {
   };
 
   // Function to export logs as CSV
-  const exportLogs = async () => {
+  const exportLogs = () => {
     try {
       setNotification({
         open: true,
@@ -126,17 +126,41 @@ const AdminAuditLogsPage: React.FC = () => {
         severity: 'info',
       });
 
-      // Build query parameters for filtering
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
+      // Use filtered logs if search is active, otherwise use all logs
+      const logsToExport = filteredLogs;
       
-      const response = await api.get('/audit-logs/export', {
-        params,
-        responseType: 'blob'
-      });
+      // Define CSV headers
+      const headers = [
+        'ID',
+        'Action',
+        'Entity',
+        'Entity ID',
+        'User ID',
+        'Description',
+        'IP Address',
+        'Timestamp'
+      ];
       
-      // Create a blob from the response data
-      const blob = new Blob([response.data], { type: 'text/csv' });
+      // Convert logs to CSV rows
+      const csvRows = logsToExport.map(log => [
+        log.id,
+        log.action,
+        log.entity,
+        log.entity_id || '',
+        log.user_id,
+        `"${log.description.replace(/"/g, '""')}"`, // Escape quotes in description
+        log.ip_address,
+        formatDate(log.created_at)
+      ]);
+      
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => row.join(','))
+      ].join('\n');
+      
+      // Create a blob from the CSV content
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       
       // Create a download link and trigger the download
       const url = window.URL.createObjectURL(blob);
@@ -151,6 +175,9 @@ const AdminAuditLogsPage: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
       
       setNotification({
         open: true,
