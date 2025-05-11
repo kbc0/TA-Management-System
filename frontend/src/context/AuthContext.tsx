@@ -10,6 +10,19 @@ interface User {
   fullName: string;
   role: string;
   permissions?: string[];
+  profileImage?: string;
+  phone?: string;
+  department?: string;
+  bio?: string;
+  skills?: string[];
+  qualifications?: string[];
+  courses?: string[];
+  leaveRequests?: {
+    start: string;
+    end: string;
+    reason: string;
+    status: string;
+  }[];
 }
 
 interface AuthContextType {

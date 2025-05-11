@@ -3,6 +3,7 @@ const pool = require('./db');
 const xlsx = require('xlsx');
 const User = require('../models/User');
 const path = require('path');
+const populateSampleData = require('../scripts/populate-sample-data');
 
 // SQL statements to create tables if they don't exist
 const createTablesQueries = {
@@ -261,6 +262,10 @@ async function initDatabase() {
     // Import sample users from Excel file
     const excelPath = path.join(__dirname, '../ta_management_sample_input.xlsx');
     await importUsersFromExcel(excelPath);
+    
+    // Populate database with sample data
+    console.log('Populating database with sample data...');
+    await populateSampleData();
   } catch (error) {
     console.error('Database initialization error:', error);
     throw error;

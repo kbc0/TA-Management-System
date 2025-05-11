@@ -34,25 +34,8 @@ import LeaveApprovalDashboard from './components/leave/LeaveApprovalDashboard';
 import LeaveStatisticsDashboard from './components/leave/LeaveStatisticsDashboard';
 import UserReportDashboard from './components/reports/UserReportDashboard';
 
-// Placeholder UserProfilePage component
-const UserProfilePage = () => {
-  const { user } = useAuth();
-  return (
-    <div style={{ padding: '20px', marginTop: '70px' }}>
-      <h2>User Profile</h2>
-      {user ? (
-        <>
-          <p><strong>Full Name:</strong> {user.fullName}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Role:</strong> {user.role}</p>
-          <p><strong>Bilkent ID:</strong> {user.bilkentId}</p>
-        </>
-      ) : (
-        <p>Loading user data...</p>
-      )}
-    </div>
-  );
-};
+// Import the new UserProfilePage component
+import UserProfilePage from './pages/user/UserProfilePage';
 
 // Placeholder LeaveRequestForm component
 const LeaveRequestForm = () => {
