@@ -128,7 +128,7 @@ const ROLES = {
       PERMISSIONS.VIEW_AUDIT_LOGS
     ],
     
-    // Dean permissions (added for completeness)
+    // Dean permissions 
     [ROLES.DEAN]: [
       PERMISSIONS.VIEW_USERS,
       PERMISSIONS.VIEW_COURSES,

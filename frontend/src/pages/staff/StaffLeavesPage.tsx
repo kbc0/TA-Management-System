@@ -178,8 +178,9 @@ const StaffLeavesPage: React.FC = () => {
     if (!selectedLeave) return;
     
     try {
-      await api.put(`/leaves/${selectedLeave.id}/approve`, {
-        review_notes: formData.review_notes,
+      await api.put(`/leaves/${selectedLeave.id}/status`, {
+        status: 'approved',
+        reviewer_notes: formData.review_notes,
       });
       
       // Refresh leaves list
@@ -200,8 +201,9 @@ const StaffLeavesPage: React.FC = () => {
     if (!selectedLeave) return;
     
     try {
-      await api.put(`/leaves/${selectedLeave.id}/reject`, {
-        review_notes: formData.review_notes,
+      await api.put(`/leaves/${selectedLeave.id}/status`, {
+        status: 'rejected',
+        reviewer_notes: formData.review_notes,
       });
       
       // Refresh leaves list

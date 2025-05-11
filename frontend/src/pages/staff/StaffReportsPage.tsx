@@ -35,8 +35,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import GridItem from '../../components/common/GridItem';
 // Import chart components conditionally to avoid build errors
-let Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement;
-let Bar, Pie;
+let Chart: any, CategoryScale: any, LinearScale: any, BarElement: any, Title: any, Tooltip: any, Legend: any, ArcElement: any;
+let Bar: any, Pie: any;
 
 // Only import and register chart.js if it's available
 try {
@@ -177,14 +177,47 @@ const StaffReportsPage: React.FC = () => {
       const taskResponse = await api.get(`/tasks/statistics${courseId !== 'all' ? `?course_id=${courseId}` : ''}`);
       // Check if response.data has a statistics property
       const taskDataFromResponse = taskResponse.data.statistics || taskResponse.data;
-      setTaskData(taskDataFromResponse || null);
+      
+      // Parse string values to numbers to ensure charts work correctly
+      if (taskDataFromResponse) {
+        const parsedTaskData = {
+          total: parseInt(taskDataFromResponse.total) || 0,
+          active: parseInt(taskDataFromResponse.active) || 0,
+          completed: parseInt(taskDataFromResponse.completed) || 0,
+          overdue: parseInt(taskDataFromResponse.overdue) || 0,
+          grading: parseInt(taskDataFromResponse.grading) || 0,
+          proctoring: parseInt(taskDataFromResponse.proctoring) || 0,
+          office_hours: parseInt(taskDataFromResponse.office_hours) || 0,
+          other: parseInt(taskDataFromResponse.other) || 0
+        };
+        setTaskData(parsedTaskData);
+      } else {
+        setTaskData(null);
+      }
       
       // Fetch performance data
       const performanceResponse = await api.get(`/reports/ta-performance${courseId !== 'all' ? `?course_id=${courseId}` : ''}`);
       // Check if response.data has a performance property
       const performanceFromResponse = performanceResponse.data.performance || performanceResponse.data;
       const performanceData = Array.isArray(performanceFromResponse) ? performanceFromResponse : [];
-      setPerformanceData(performanceData);
+      
+      // Ensure all performance data has the required fields with proper types
+      const processedPerformanceData = performanceData.map(ta => {
+        // Calculate proper completion rate (completed tasks / total tasks * 100)
+        const totalTasks = parseInt(ta.total_tasks) || 0;
+        const completedTasks = parseInt(ta.completed_tasks) || 0;
+        const calculatedCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+        
+        return {
+          ...ta,
+          completion_rate: calculatedCompletionRate > 100 ? 100 : calculatedCompletionRate, // Cap at 100%
+          on_time_percentage: parseFloat(ta.on_time_percentage) || 0,
+          average_rating: parseFloat(ta.average_rating) || 0,
+          total_tasks: totalTasks,
+          completed_tasks: completedTasks
+        };
+      });
+      setPerformanceData(processedPerformanceData);
       
       setError(null);
     } catch (error) {
@@ -209,8 +242,62 @@ const StaffReportsPage: React.FC = () => {
 
   // Export report as CSV
   const exportReport = () => {
-    // This would normally generate a CSV file
-    alert('Export functionality would be implemented here');
+    // Determine which data to export based on the active tab
+    let csvData: string = '';
+    let fileName: string = '';
+    
+    if (tabValue === 0) { // Workload Report
+      fileName = `TA_Workload_Report_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      // Create CSV header
+      csvData = 'TA Name,Bilkent ID,Email,Course Count,Hours Per Week,Task Count,Active Tasks,Completed Tasks,Courses\n';
+      
+      // Add data rows
+      workloadData.forEach(ta => {
+        csvData += `"${ta.full_name}","${ta.bilkent_id}","${ta.email}",${ta.course_count},${ta.total_hours_per_week},${ta.task_count},${ta.active_tasks},${ta.completed_tasks},"${ta.course_codes}"\n`;
+      });
+    } else if (tabValue === 1) { // Task Statistics
+      fileName = `Task_Statistics_Report_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (taskData) {
+        // Create CSV header
+        csvData = 'Total Tasks,Active Tasks,Completed Tasks,Overdue Tasks,Grading Tasks,Proctoring Tasks,Office Hours Tasks,Other Tasks\n';
+        
+        // Add data row
+        csvData += `${taskData.total},${taskData.active},${taskData.completed},${taskData.overdue || 0},${taskData.grading},${taskData.proctoring},${taskData.office_hours},${taskData.other}\n`;
+      }
+    } else if (tabValue === 2) { // Performance Report
+      fileName = `TA_Performance_Report_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      // Create CSV header
+      csvData = 'TA Name,Bilkent ID,Email,Completion Rate (%),On-Time Percentage (%),Average Rating,Completed Tasks,Total Tasks\n';
+      
+      // Add data rows
+      performanceData.forEach(ta => {
+        csvData += `"${ta.full_name}","${ta.bilkent_id}","${ta.email}",${ta.completion_rate},${ta.on_time_percentage},${ta.average_rating.toFixed(1)},${ta.completed_tasks},${ta.total_tasks}\n`;
+      });
+    }
+    
+    if (csvData) {
+      // Create a Blob with the CSV data
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create a download link
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      // Set link properties
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      
+      // Add to document, trigger download, and clean up
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      alert('No data available to export');
+    }
   };
 
   // Print report
@@ -231,16 +318,22 @@ const StaffReportsPage: React.FC = () => {
       }]
     };
     
+    // Ensure all values are numbers
+    const gradingTasks = Number(taskData.grading) || 0;
+    const proctoringTasks = Number(taskData.proctoring) || 0;
+    const officeHoursTasks = Number(taskData.office_hours) || 0;
+    const otherTasks = Number(taskData.other) || 0;
+    
     return {
       labels: ['Grading', 'Proctoring', 'Office Hours', 'Other'],
       datasets: [
         {
           label: 'Task Distribution',
           data: [
-            taskData.grading || 0,
-            taskData.proctoring || 0,
-            taskData.office_hours || 0,
-            taskData.other || 0,
+            gradingTasks,
+            proctoringTasks,
+            officeHoursTasks,
+            otherTasks,
           ],
           backgroundColor: [
             'rgba(54, 162, 235, 0.6)',
@@ -273,15 +366,20 @@ const StaffReportsPage: React.FC = () => {
       }]
     };
     
+    // Ensure all values are numbers
+    const activeTasks = Number(taskData.active) || 0;
+    const completedTasks = Number(taskData.completed) || 0;
+    const overdueTasks = Number(taskData.overdue) || 0;
+    
     return {
       labels: ['Active', 'Completed', 'Overdue'],
       datasets: [
         {
           label: 'Task Status',
           data: [
-            taskData.active || 0,
-            taskData.completed || 0,
-            taskData.overdue || 0,
+            activeTasks,
+            completedTasks,
+            overdueTasks,
           ],
           backgroundColor: [
             'rgba(54, 162, 235, 0.6)',
@@ -661,7 +759,7 @@ const StaffReportsPage: React.FC = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Typography variant="body1" sx={{ mr: 1 }}>
-                              {ta.average_rating.toFixed(1)}
+                              {(ta.average_rating || 0).toFixed(1)}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               {[...Array(5)].map((_, i) => (
@@ -671,7 +769,7 @@ const StaffReportsPage: React.FC = () => {
                                     width: 12,
                                     height: 12,
                                     borderRadius: '50%',
-                                    bgcolor: i < Math.round(ta.average_rating) ? 'primary.main' : 'grey.300',
+                                    bgcolor: i < Math.round(ta.average_rating || 0) ? 'primary.main' : 'grey.300',
                                     mx: 0.2,
                                   }}
                                 />

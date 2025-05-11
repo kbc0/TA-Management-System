@@ -26,6 +26,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Alert,
 } from '@mui/material';
 import {
   SwapHoriz as SwapHorizIcon,
@@ -112,6 +113,7 @@ const StaffSwapsPage: React.FC = () => {
   const [swaps, setSwaps] = useState<Swap[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState<number>(0);
   const [selectedSwap, setSelectedSwap] = useState<Swap | null>(null);
   const [openDetailDialog, setOpenDetailDialog] = useState<boolean>(false);
@@ -206,9 +208,14 @@ const StaffSwapsPage: React.FC = () => {
     if (!selectedSwap) return;
     
     try {
-      await api.put(`/swaps/${selectedSwap.id}/approve`, {
-        review_notes: formData.review_notes,
+      await api.put(`/swaps/${selectedSwap.id}/status`, {
+        status: 'approved',
+        reviewer_notes: formData.review_notes,
       });
+      
+      // Show success message
+      setSuccessMessage(`Swap request approved successfully. The task has been reassigned between ${selectedSwap.requester_name} and ${selectedSwap.target_name}.`);
+      setTimeout(() => setSuccessMessage(null), 5000); // Clear after 5 seconds
       
       // Refresh swaps list
       const response = await api.get('/swaps');
@@ -228,9 +235,14 @@ const StaffSwapsPage: React.FC = () => {
     if (!selectedSwap) return;
     
     try {
-      await api.put(`/swaps/${selectedSwap.id}/reject`, {
-        review_notes: formData.review_notes,
+      await api.put(`/swaps/${selectedSwap.id}/status`, {
+        status: 'rejected',
+        reviewer_notes: formData.review_notes,
       });
+      
+      // Show success message
+      setSuccessMessage(`Swap request rejected successfully.`);
+      setTimeout(() => setSuccessMessage(null), 5000); // Clear after 5 seconds
       
       // Refresh swaps list
       const response = await api.get('/swaps');
@@ -284,6 +296,13 @@ const StaffSwapsPage: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Swap Requests
       </Typography>
+      
+      {/* Success Message */}
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
+          {successMessage}
+        </Alert>
+      )}
 
       {/* Tabs for filtering */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -475,12 +494,27 @@ const StaffSwapsPage: React.FC = () => {
                     <Typography variant="subtitle1" gutterBottom>
                       Assignment Details
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography variant="body1" fontWeight="bold">
                       {selectedSwap.assignment_title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Type: {SWAP_TYPES[selectedSwap.assignment_type] || selectedSwap.assignment_type}
                     </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Course: {selectedSwap.course_code} - {selectedSwap.course_name}
+                    </Typography>
+                    
+                    <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
+                      <Typography variant="subtitle2" color="primary">
+                        Swap Details
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        <strong>From:</strong> {selectedSwap.requester_name} ({selectedSwap.requester_bilkent_id})
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>To:</strong> {selectedSwap.target_name} ({selectedSwap.target_bilkent_id})
+                      </Typography>
+                    </Box>
                     
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                       <GridItem xs={12} sm={6}>
@@ -497,6 +531,14 @@ const StaffSwapsPage: React.FC = () => {
                         </Typography>
                       </GridItem>
                     </Grid>
+                    
+                    {selectedSwap.status === 'approved' && (
+                      <Box sx={{ mt: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+                        <Typography variant="body2" color="success.contrastText">
+                          <strong>Note:</strong> This swap has been approved. The task assignments have been updated in the system.
+                        </Typography>
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </GridItem>

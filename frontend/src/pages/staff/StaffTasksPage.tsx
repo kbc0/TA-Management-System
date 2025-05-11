@@ -25,6 +25,7 @@ import {
   InputLabel,
   Select,
   FormHelperText,
+  Alert,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -82,7 +83,8 @@ interface Task {
   due_date: string;
   duration: number;
   status: 'active' | 'completed' | 'overdue';
-  assigned_to: TA[];
+  assigned_to: number | string | null;
+  assigned_to_name?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -105,6 +107,7 @@ const StaffTasksPage: React.FC = () => {
   const [availableTAs, setAvailableTAs] = useState<TA[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [openTaskDialog, setOpenTaskDialog] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -189,17 +192,12 @@ const StaffTasksPage: React.FC = () => {
       const tasResponse = await api.get(`/courses/${courseId}/tas`);
       // Check if response.data has a tas property
       const tasFromResponse = tasResponse.data.tas || tasResponse.data;
-      // Ensure TAs is always an array
-      const tasData = Array.isArray(tasFromResponse) ? tasFromResponse : [];
-      setAvailableTAs(tasData);
       
       // Fetch tasks for the selected course
       const tasksResponse = await api.get(`/tasks/course/${courseId}`);
-      // Check if response.data has a tasks property
-      const tasksFromResponse = tasksResponse.data.tasks || tasksResponse.data;
-      // Ensure tasks is always an array
-      const tasksData = Array.isArray(tasksFromResponse) ? tasksFromResponse : [];
-      setTasks(tasksData);
+      // Process tasks to handle the new API response format
+      const processedTasks = Array.isArray(tasksResponse.data) ? tasksResponse.data : [];
+      setTasks(processedTasks);
     } catch (error) {
       console.error('Error fetching course data:', error);
       setError('Failed to load course data. Please try again later.');
@@ -229,6 +227,9 @@ const StaffTasksPage: React.FC = () => {
 
   // Open task dialog for editing an existing task
   const handleEditTask = (task: Task) => {
+    // Convert the assigned_to value to an array format for the form
+    const assignedToArray = task.assigned_to ? [task.assigned_to.toString()] : [];
+    
     setFormData({
       title: task.title,
       description: task.description || '',
@@ -236,7 +237,7 @@ const StaffTasksPage: React.FC = () => {
       course_id: task.course_id,
       due_date: new Date(task.due_date),
       duration: task.duration,
-      assigned_to: task.assigned_to.map(ta => ta.id),
+      assigned_to: assignedToArray,
     });
     setFormErrors({});
     setEditingTask(task);
@@ -335,9 +336,15 @@ const StaffTasksPage: React.FC = () => {
     }
     
     try {
+      // Format date to YYYY-MM-DD HH:MM:SS format that MySQL expects
+      const formatDate = (date: Date | null) => {
+        if (!date) return null;
+        return date.toISOString().slice(0, 19).replace('T', ' ');
+      };
+      
       const taskData = {
         ...formData,
-        due_date: formData.due_date?.toISOString(),
+        due_date: formatDate(formData.due_date),
       };
       
       if (editingTask) {
@@ -350,7 +357,9 @@ const StaffTasksPage: React.FC = () => {
       
       // Refresh tasks list
       const tasksResponse = await api.get(`/tasks/course/${selectedCourseId}`);
-      setTasks(tasksResponse.data);
+      // Process tasks to handle the new API response format
+      const processedTasks = Array.isArray(tasksResponse.data) ? tasksResponse.data : [];
+      setTasks(processedTasks);
       
       // Close dialog
       setOpenTaskDialog(false);
@@ -371,11 +380,24 @@ const StaffTasksPage: React.FC = () => {
     if (!taskToDelete) return;
     
     try {
+      // Show loading state
+      setLoading(true);
+      
       await api.delete(`/tasks/${taskToDelete}`);
       
-      // Refresh tasks list
+      // Remove the deleted task from the local state immediately
+      // This provides immediate UI feedback without waiting for the API refresh
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
+      
+      // Also refresh from the server to ensure data consistency
       const tasksResponse = await api.get(`/tasks/course/${selectedCourseId}`);
-      setTasks(tasksResponse.data);
+      // Process tasks to handle the new API response format
+      const processedTasks = Array.isArray(tasksResponse.data) ? tasksResponse.data : [];
+      setTasks(processedTasks);
+      
+      // Show success message
+      setSuccessMessage('Task deleted successfully');
+      setTimeout(() => setSuccessMessage(null), 3000); // Clear after 3 seconds
       
       // Close dialog
       setDeleteConfirmOpen(false);
@@ -383,6 +405,8 @@ const StaffTasksPage: React.FC = () => {
     } catch (error) {
       console.error('Error deleting task:', error);
       setError('Failed to delete task. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -416,7 +440,7 @@ const StaffTasksPage: React.FC = () => {
   return (
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Manage Tasks</Typography>
+        <Typography variant="h4">Tasks Management</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -425,6 +449,13 @@ const StaffTasksPage: React.FC = () => {
           Create Task
         </Button>
       </Box>
+      
+      {/* Success Message */}
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
+          {successMessage}
+        </Alert>
+      )}
 
       {/* Course selector */}
       <Card sx={{ mb: 3 }}>
@@ -505,9 +536,7 @@ const StaffTasksPage: React.FC = () => {
                         </Typography>
                         <Box sx={{ mt: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Assigned to: {task.assigned_to.length > 0 
-                              ? task.assigned_to.map(ta => ta.full_name).join(', ') 
-                              : 'No TAs assigned'}
+                            {task.assigned_to_name || 'Unassigned'}
                           </Typography>
                         </Box>
                         {task.description && (
