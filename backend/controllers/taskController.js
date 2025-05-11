@@ -2,6 +2,7 @@
 const Task = require('../models/Task');
 const { PERMISSIONS } = require('../config/roles');
 const { handleError } = require('../utils/errorHandler');
+const db = require('../config/db');
 
 /**
  * Get all tasks based on user role
@@ -48,6 +49,34 @@ exports.getUpcomingTasks = async (req, res) => {
     res.json(tasks);
   } catch (error) {
     return handleError(error, 'task', req.user, 'Error fetching upcoming tasks', req, res);
+  }
+};
+
+/**
+ * Get tasks assigned to the current user
+ * @route GET /api/tasks/my-tasks
+ * @access Private
+ */
+exports.getMyTasks = async (req, res) => {
+  try {
+    // Query to get all tasks assigned to the current user
+    const [tasks] = await db.query(
+      `SELECT t.*, c.course_code, c.course_name
+       FROM tasks t
+       JOIN task_assignments ta ON t.id = ta.task_id
+       LEFT JOIN courses c ON t.course_id = c.course_code
+       WHERE ta.user_id = ?
+       ORDER BY t.due_date ASC`,
+      [req.user.id]
+    );
+    
+    if (tasks.length === 0) {
+      return res.status(200).json([]);
+    }
+    
+    res.json(tasks);
+  } catch (error) {
+    return handleError(error, 'task', req.user, 'Error fetching your tasks', req, res);
   }
 };
 

@@ -9,7 +9,8 @@ const {
   deleteNotification,
   deleteAllNotifications,
   createNotification,
-  createBulkNotifications
+  createBulkNotifications,
+  createTestNotifications
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/permissionMiddleware');
@@ -73,5 +74,12 @@ router.post('/', requirePermission(PERMISSIONS.MANAGE_USERS), createNotification
  * @access Private (admin, department_chair, staff)
  */
 router.post('/bulk', requirePermission(PERMISSIONS.MANAGE_USERS), createBulkNotifications);
+
+/**
+ * @route POST /api/notifications/test
+ * @desc Create test notifications for the current user
+ * @access Private
+ */
+router.post('/test', createTestNotifications);
 
 module.exports = router;

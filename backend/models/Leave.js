@@ -48,7 +48,7 @@ class Leave {
     try {
       const [rows] = await db.query(
         `SELECT l.*, u.full_name as requester_name, u.bilkent_id as requester_bilkent_id, 
-         u.email as requester_email, u.status as user_status,
+         u.email as requester_email,
          r.full_name as reviewer_name, r.bilkent_id as reviewer_bilkent_id
          FROM leave_requests l
          JOIN users u ON l.user_id = u.id

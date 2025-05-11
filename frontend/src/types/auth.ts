@@ -2,14 +2,15 @@ export type UserRole = 'ta' | 'staff' | 'department_chair' | 'admin';
 
 export interface User {
   id: number;
-  bilkentId: string; // Changed from bilkent_id to match backend
+  bilkent_id: string; // Using snake_case to match backend
   email: string;
-  fullName: string; // Changed from full_name to match backend
+  full_name: string; // Using snake_case to match backend
   role: UserRole;
+  max_hours?: number;
   status?: 'active' | 'inactive' | 'on_leave';
   permissions?: string[];
-  createdAt?: string; // Changed from created_at
-  updatedAt?: string; // Changed from updated_at
+  created_at?: string; // Using snake_case to match backend
+  updated_at?: string; // Using snake_case to match backend
 }
 
 export interface AuthState {

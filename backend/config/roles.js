@@ -56,6 +56,7 @@ const ROLES = {
   const ROLE_PERMISSIONS = {
     // Teaching Assistant permissions
     [ROLES.TEACHING_ASSISTANT]: [
+      PERMISSIONS.VIEW_USERS,  // Added to allow TAs to fetch other TAs for swap requests
       PERMISSIONS.VIEW_COURSES,
       PERMISSIONS.VIEW_APPLICATIONS,
       PERMISSIONS.CREATE_APPLICATION,

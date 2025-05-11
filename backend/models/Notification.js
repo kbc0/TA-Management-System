@@ -187,6 +187,61 @@ class Notification {
   }
 
   /**
+   * Create test notifications for a user
+   * @param {number} userId - The user ID
+   * @returns {Promise<Array>} Array of created notification objects
+   */
+  static async createTestNotifications(userId) {
+    try {
+      const notificationTemplates = [
+        {
+          type: 'task',
+          title: 'New Task Assigned',
+          message: 'You have been assigned a new task: Grading Midterm Exams'
+        },
+        {
+          type: 'info',
+          title: 'Course Schedule Updated',
+          message: 'The schedule for CS201 has been updated. Please check the course page.'
+        },
+        {
+          type: 'warning',
+          title: 'Deadline Approaching',
+          message: 'You have a task due in 2 days. Please complete it on time.'
+        },
+        {
+          type: 'event',
+          title: 'Department Meeting',
+          message: 'There will be a department meeting on Friday at 2:00 PM.'
+        },
+        {
+          type: 'task',
+          title: 'Task Status Updated',
+          message: 'Your task "Prepare Lab Materials" has been marked as completed.'
+        }
+      ];
+      
+      const createdNotifications = [];
+      
+      // Create one of each notification type
+      for (const template of notificationTemplates) {
+        const notification = await this.create({
+          user_id: userId,
+          ...template,
+          is_read: Math.random() > 0.7 // 30% chance of being read
+        });
+        
+        createdNotifications.push(notification);
+      }
+      
+      return createdNotifications;
+    } catch (error) {
+      console.error('Error creating test notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create notifications for multiple users
    * @param {Array<number>} userIds - Array of user IDs
    * @param {Object} notificationData - The notification data (without user_id)

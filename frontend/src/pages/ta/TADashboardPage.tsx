@@ -346,58 +346,6 @@ const TADashboardPage: React.FC = () => {
             </CardContent>
           </Card>
         </GridItem>
-
-        {/* Quick Actions */}
-        <GridItem xs={12}>
-          <Card>
-            <CardHeader title="Quick Actions" />
-            <Divider />
-            <CardContent>
-              <Grid container spacing={2}>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<EventIcon />}
-                    href="/ta/leaves/new"
-                  >
-                    Request Leave
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<SwapHorizIcon />}
-                    href="/ta/swaps/new"
-                  >
-                    Initiate Swap
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<AssignmentIcon />}
-                    href="/ta/tasks"
-                  >
-                    View Tasks
-                  </Button>
-                </GridItem>
-                <GridItem xs={6} sm={3}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<SchoolIcon />}
-                    href="/ta/courses"
-                  >
-                    View Courses
-                  </Button>
-                </GridItem>
-              </Grid>
-            </CardContent>
-          </Card>
-        </GridItem>
       </Grid>
     </Box>
   );

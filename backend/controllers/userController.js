@@ -1,6 +1,6 @@
 // backend/controllers/userController.js
 const User = require('../models/User');
-const { isValidRole } = require('../config/roles');
+const { isValidRole, ROLES } = require('../config/roles');
 const loggingService = require('../services/LoggingService');
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
@@ -102,10 +102,12 @@ exports.getUserById = async (req, res) => {
     res.json({
       user: {
         id: user.id,
-        bilkentId: user.bilkent_id,
+        bilkent_id: user.bilkent_id,
         email: user.email,
-        fullName: user.full_name,
+        full_name: user.full_name,
         role: user.role,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
         permissions: user.permissions
       }
     });
@@ -190,6 +192,36 @@ exports.deactivateUser = async (req, res) => {
 /**
  * Create a new user
  */
+/**
+ * Get all teaching assistants
+ */
+exports.getAllTAs = async (req, res) => {
+  try {
+    // Query to get all users with role 'ta'
+    const [rows] = await db.query(
+      'SELECT id, bilkent_id, email, full_name, created_at FROM users WHERE role = ?',
+      [ROLES.TEACHING_ASSISTANT]
+    );
+    
+    // Format the response with field names matching the frontend expectations
+    const tas = rows.map(ta => ({
+      id: ta.id,
+      bilkentId: ta.bilkent_id,  // Changed to match frontend interface
+      fullName: ta.full_name,    // Changed to match frontend interface
+      email: ta.email,
+      created_at: ta.created_at
+    }));
+    
+    res.json(tas);
+  } catch (error) {
+    console.error('Get all TAs error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Create a new user
+ */
 exports.createUser = async (req, res) => {
   try {
     const { full_name, email, bilkent_id, role, department, password, max_hours } = req.body;
@@ -259,6 +291,138 @@ exports.createUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Create user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update user profile
+ */
+exports.updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { full_name, email } = req.body;
+    
+    // Validate that the user is updating their own profile or has admin permissions
+    if (req.user.id != userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized to update this user profile' });
+    }
+    
+    // Find user first to ensure they exist
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Prepare update fields
+    const updateFields = {};
+    if (full_name) updateFields.full_name = full_name;
+    if (email) updateFields.email = email;
+    
+    // If no fields to update, return early
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ message: 'No fields to update provided' });
+    }
+    
+    // Update user profile
+    const updated = await User.updateProfile(userId, updateFields);
+    
+    if (!updated) {
+      return res.status(500).json({ message: 'Failed to update user profile' });
+    }
+    
+    // Get updated user data
+    const updatedUser = await User.findById(userId);
+    
+    // Log the profile update
+    await loggingService.log({
+      action: 'user_profile_update',
+      entity: 'user',
+      entity_id: user.bilkent_id,
+      user_id: req.user.bilkentId,
+      description: `User profile updated`,
+      metadata: {
+        updatedFields: Object.keys(updateFields),
+        updatedBy: req.user.bilkentId
+      }
+    }, req);
+    
+    res.json({ 
+      message: 'User profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        bilkent_id: updatedUser.bilkent_id,
+        full_name: updatedUser.full_name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        created_at: updatedUser.created_at,
+        updated_at: updatedUser.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Update user profile error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Change user password
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { currentPassword, newPassword } = req.body;
+    
+    // Validate required fields
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+    
+    // Validate that the user is changing their own password or has admin permissions
+    if (req.user.id != userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized to change this user\'s password' });
+    }
+    
+    // Find user first to ensure they exist
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+    
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    // Update password
+    const updated = await User.updatePassword(userId, hashedPassword);
+    
+    if (!updated) {
+      return res.status(500).json({ message: 'Failed to update password' });
+    }
+    
+    // Log the password change
+    await loggingService.log({
+      action: 'user_password_change',
+      entity: 'user',
+      entity_id: user.bilkent_id,
+      user_id: req.user.bilkentId,
+      description: `User password changed`,
+      metadata: {
+        updatedBy: req.user.bilkentId
+      }
+    }, req);
+    
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

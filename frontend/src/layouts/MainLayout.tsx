@@ -14,7 +14,6 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Badge,
   Menu,
   MenuItem,
   Avatar,
@@ -22,7 +21,6 @@ import {
 import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
-  Notifications as NotificationsIcon,
   Dashboard as DashboardIcon,
   School as SchoolIcon,
   Assignment as AssignmentIcon,
@@ -32,6 +30,7 @@ import {
   Person as PersonIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
+import NotificationBell from '../components/common/NotificationBell';
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -88,7 +87,6 @@ const StyledDrawer = styled(Drawer, {
 const MainLayout: React.FC = () => {
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const { authState, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -107,14 +105,10 @@ const MainLayout: React.FC = () => {
     setAnchorEl(null);
   };
   
-  // Handle notification menu open
-  const handleNotificationMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchorEl(event.currentTarget);
-  };
-  
-  // Handle notification menu close
-  const handleNotificationMenuClose = () => {
-    setNotificationAnchorEl(null);
+  // Profile navigation to handle user profile page
+  const handleProfileNavigation = () => {
+    handleProfileMenuClose();
+    navigate(`/${authState.user?.role}/profile`);
   };
   
   // Handle logout
@@ -126,7 +120,7 @@ const MainLayout: React.FC = () => {
   // Handle profile click
   const handleProfileClick = () => {
     handleProfileMenuClose();
-    navigate('/profile');
+    navigate(`/${authState.user?.role}/profile`);
   };
   
   // Get navigation items based on user role
@@ -143,7 +137,7 @@ const MainLayout: React.FC = () => {
       {
         text: 'Profile',
         icon: <PersonIcon />,
-        path: '/profile',
+        path: `/${role}/profile`,
       },
     ];
     
@@ -289,12 +283,8 @@ const MainLayout: React.FC = () => {
             TA Management System
           </Typography>
           
-          {/* Notifications */}
-          <IconButton color="inherit" onClick={handleNotificationMenuOpen}>
-            <Badge badgeContent={4} color="secondary">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+          {/* Notifications Bell */}
+          <NotificationBell />
           
           {/* Profile */}
           <IconButton
@@ -306,7 +296,7 @@ const MainLayout: React.FC = () => {
             sx={{ ml: 1 }}
           >
             <Avatar sx={{ bgcolor: 'secondary.main' }}>
-              {authState.user?.fullName.charAt(0) || 'U'}
+              {authState.user?.full_name?.charAt(0) || 'U'}
             </Avatar>
           </IconButton>
         </Toolbar>
@@ -430,32 +420,7 @@ const MainLayout: React.FC = () => {
         </MenuItem>
       </Menu>
       
-      {/* Notifications Menu */}
-      <Menu
-        anchorEl={notificationAnchorEl}
-        id="notification-menu"
-        open={Boolean(notificationAnchorEl)}
-        onClose={handleNotificationMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="body2">New task assigned</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="body2">Leave request approved</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleNotificationMenuClose}>
-          <Typography variant="body2">Swap request received</Typography>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => {
-          handleNotificationMenuClose();
-          navigate('/notifications');
-        }}>
-          <Typography variant="body2" color="primary">View all notifications</Typography>
-        </MenuItem>
-      </Menu>
+      {/* No separate notifications menu needed as it's handled by NotificationBell component */}
     </Box>
   );
 };

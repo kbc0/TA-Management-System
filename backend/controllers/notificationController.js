@@ -1,6 +1,6 @@
 // backend/controllers/notificationController.js
 const Notification = require('../models/Notification');
-const loggingService = require('../services/LoggingService');
+const loggingService = require('../services/loggingService');
 
 /**
  * Get all notifications for the current user
@@ -8,31 +8,17 @@ const loggingService = require('../services/LoggingService');
  */
 exports.getMyNotifications = async (req, res) => {
   try {
-    const unreadOnly = req.query.unread === 'true';
-    const limit = parseInt(req.query.limit) || 50;
+    const { unread_only, limit } = req.query;
+    const unreadOnly = unread_only === 'true';
+    const limitNum = limit ? parseInt(limit) : 50;
     
-    const notifications = await Notification.findByUserId(req.user.id, unreadOnly, limit);
-    
-    // Get unread count
+    const notifications = await Notification.findByUserId(req.user.id, unreadOnly, limitNum);
     const unreadCount = await Notification.getUnreadCount(req.user.id);
     
     res.json({
       notifications,
-      unreadCount
+      unread_count: unreadCount
     });
-    
-    // Log the action
-    await loggingService.log({
-      action: 'notifications_viewed',
-      entity: 'notification',
-      user_id: req.user?.bilkentId,
-      description: `User viewed their notifications`,
-      metadata: { 
-        user_role: req.user?.role,
-        unread_only: unreadOnly,
-        limit
-      }
-    }, req);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ message: 'Server error while fetching notifications', error: error.message });
@@ -45,11 +31,10 @@ exports.getMyNotifications = async (req, res) => {
  */
 exports.getUnreadCount = async (req, res) => {
   try {
-    const unreadCount = await Notification.getUnreadCount(req.user.id);
-    
-    res.json({ unreadCount });
+    const count = await Notification.getUnreadCount(req.user.id);
+    res.json({ count });
   } catch (error) {
-    console.error('Error fetching unread notification count:', error);
+    console.error('Error fetching unread count:', error);
     res.status(500).json({ message: 'Server error while fetching unread count', error: error.message });
   }
 };
@@ -64,19 +49,18 @@ exports.markAsRead = async (req, res) => {
     
     // Check if notification exists and belongs to the user
     const notification = await Notification.findById(notificationId);
-    
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
     
     if (notification.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'You do not have permission to access this notification' });
+      return res.status(403).json({ message: 'Unauthorized to access this notification' });
     }
     
     // Mark as read
-    const updated = await Notification.markAsRead(notificationId, req.user.id);
+    const success = await Notification.markAsRead(notificationId, req.user.id);
     
-    if (!updated) {
+    if (!success) {
       return res.status(400).json({ message: 'Failed to mark notification as read' });
     }
     
@@ -88,10 +72,8 @@ exports.markAsRead = async (req, res) => {
       entity: 'notification',
       entity_id: notificationId,
       user_id: req.user?.bilkentId,
-      description: `User marked notification as read`,
-      metadata: { 
-        user_role: req.user?.role
-      }
+      description: 'User marked notification as read',
+      metadata: { user_role: req.user?.role }
     }, req);
   } catch (error) {
     console.error('Error marking notification as read:', error);
@@ -107,7 +89,7 @@ exports.markAllAsRead = async (req, res) => {
   try {
     const count = await Notification.markAllAsRead(req.user.id);
     
-    res.json({ 
+    res.json({
       message: 'All notifications marked as read',
       count
     });
@@ -117,7 +99,7 @@ exports.markAllAsRead = async (req, res) => {
       action: 'all_notifications_marked_read',
       entity: 'notification',
       user_id: req.user?.bilkentId,
-      description: `User marked all notifications as read`,
+      description: `User marked ${count} notifications as read`,
       metadata: { 
         user_role: req.user?.role,
         count
@@ -139,19 +121,18 @@ exports.deleteNotification = async (req, res) => {
     
     // Check if notification exists and belongs to the user
     const notification = await Notification.findById(notificationId);
-    
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
     
     if (notification.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'You do not have permission to delete this notification' });
+      return res.status(403).json({ message: 'Unauthorized to delete this notification' });
     }
     
     // Delete notification
-    const deleted = await Notification.delete(notificationId, req.user.id);
+    const success = await Notification.delete(notificationId, req.user.id);
     
-    if (!deleted) {
+    if (!success) {
       return res.status(400).json({ message: 'Failed to delete notification' });
     }
     
@@ -163,10 +144,8 @@ exports.deleteNotification = async (req, res) => {
       entity: 'notification',
       entity_id: notificationId,
       user_id: req.user?.bilkentId,
-      description: `User deleted notification`,
-      metadata: { 
-        user_role: req.user?.role
-      }
+      description: 'User deleted notification',
+      metadata: { user_role: req.user?.role }
     }, req);
   } catch (error) {
     console.error('Error deleting notification:', error);
@@ -182,7 +161,7 @@ exports.deleteAllNotifications = async (req, res) => {
   try {
     const count = await Notification.deleteAll(req.user.id);
     
-    res.json({ 
+    res.json({
       message: 'All notifications deleted successfully',
       count
     });
@@ -192,7 +171,7 @@ exports.deleteAllNotifications = async (req, res) => {
       action: 'all_notifications_deleted',
       entity: 'notification',
       user_id: req.user?.bilkentId,
-      description: `User deleted all notifications`,
+      description: `User deleted ${count} notifications`,
       metadata: { 
         user_role: req.user?.role,
         count
@@ -315,3 +294,39 @@ exports.createBulkNotifications = async (req, res) => {
     res.status(500).json({ message: 'Server error while creating bulk notifications', error: error.message });
   }
 };
+
+/**
+ * Create test notifications for the current user
+ * @route POST /api/notifications/test
+ */
+exports.createTestNotifications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Create test notifications
+    const notifications = await Notification.createTestNotifications(userId);
+    
+    res.status(201).json({
+      message: 'Test notifications created successfully',
+      count: notifications.length,
+      notifications
+    });
+    
+    // Log the action
+    await loggingService.log({
+      action: 'test_notifications_created',
+      entity: 'notification',
+      user_id: req.user?.bilkentId,
+      description: `User created ${notifications.length} test notifications`,
+      metadata: { 
+        user_role: req.user?.role,
+        count: notifications.length
+      }
+    }, req);
+  } catch (error) {
+    console.error('Error creating test notifications:', error);
+    res.status(500).json({ message: 'Server error while creating test notifications', error: error.message });
+  }
+};
+
+module.exports = exports;

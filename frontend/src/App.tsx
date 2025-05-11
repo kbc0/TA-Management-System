@@ -19,6 +19,11 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // Role-specific dashboard pages
 import TADashboardPage from './pages/ta/TADashboardPage';
+import TACoursesPage from './pages/ta/TACoursesPage';
+import TATasksPage from './pages/ta/TATasksPage';
+import TALeavesPage from './pages/ta/TALeavesPage';
+import TASwapsPage from './pages/ta/TASwapsPage';
+import TAProfilePage from './pages/ta/TAProfilePage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
@@ -75,7 +80,13 @@ const AppRoutes = () => {
       >
         <Route element={<MainLayout />}>
           <Route path="dashboard" element={<TADashboardPage />} />
-          {/* Add more TA routes here */}
+          <Route path="courses" element={<TACoursesPage />} />
+          <Route path="tasks" element={<TATasksPage />} />
+          <Route path="leaves" element={<TALeavesPage />} />
+          <Route path="leaves/new" element={<TALeavesPage />} />
+          <Route path="swaps" element={<TASwapsPage />} />
+          <Route path="swaps/new" element={<TASwapsPage />} />
+          <Route path="profile" element={<TAProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
