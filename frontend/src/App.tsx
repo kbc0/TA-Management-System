@@ -34,7 +34,14 @@ import StaffEvaluationsPage from './pages/staff/StaffEvaluationsPage';
 import StaffProfilePage from './pages/staff/StaffProfilePage';
 import StaffReportsPage from './pages/staff/StaffReportsPage';
 import StaffAssignTAPage from './pages/staff/StaffAssignTAPage';
+
+// Admin pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminCoursesPage from './pages/admin/AdminCoursesPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 // Common components
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -138,7 +145,11 @@ const AppRoutes = () => {
       >
         <Route element={<MainLayout />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          {/* Add more Admin routes here */}
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="courses" element={<AdminCoursesPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

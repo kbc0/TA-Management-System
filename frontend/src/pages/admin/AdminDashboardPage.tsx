@@ -28,12 +28,11 @@ import {
   History as HistoryIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import axios from 'axios';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import GridItem from '../../components/common/GridItem';
+import api from '../../services/api';
 
-// API base URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// Using the configured API service
 
 // Dashboard data interface
 interface DashboardData {
@@ -68,11 +67,24 @@ const AdminDashboardPage: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/dashboard`, {
-          withCredentials: true,
-        });
-        setDashboardData(response.data);
-        setError(null);
+        const response = await api.get('/dashboard/admin');
+        
+        // Handle nested response structure
+        let dashboardInfo;
+        if (response.data && response.data.dashboard) {
+          dashboardInfo = response.data.dashboard;
+        } else {
+          dashboardInfo = response.data;
+        }
+        
+        // Ensure we have valid dashboard data
+        if (dashboardInfo && typeof dashboardInfo === 'object') {
+          setDashboardData(dashboardInfo);
+          setError(null);
+        } else {
+          console.warn('Unexpected dashboard response format:', response.data);
+          setError('Received unexpected dashboard data format');
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data. Please try again later.');

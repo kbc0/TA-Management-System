@@ -134,18 +134,18 @@ const MainLayout: React.FC = () => {
         text: 'Dashboard',
         icon: <DashboardIcon />,
         path: `/${role}/dashboard`,
-      },
-      {
-        text: 'Profile',
-        icon: <PersonIcon />,
-        path: `/${role}/profile`,
-      },
+      }
     ];
     
     // TA-specific navigation items
     if (role === 'ta') {
       return [
         ...commonItems,
+        {
+          text: 'Profile',
+          icon: <PersonIcon />,
+          path: `/ta/profile`,
+        },
         {
           text: 'My Courses',
           icon: <SchoolIcon />,
@@ -173,6 +173,11 @@ const MainLayout: React.FC = () => {
     if (role === 'staff' || role === 'department_chair') {
       return [
         ...commonItems,
+        {
+          text: 'Profile',
+          icon: <PersonIcon />,
+          path: `/staff/profile`,
+        },
         {
           text: 'Courses',
           icon: <SchoolIcon />,
@@ -214,21 +219,6 @@ const MainLayout: React.FC = () => {
           text: 'Courses',
           icon: <SchoolIcon />,
           path: '/admin/courses',
-        },
-        {
-          text: 'Tasks',
-          icon: <AssignmentIcon />,
-          path: '/admin/tasks',
-        },
-        {
-          text: 'Leave Requests',
-          icon: <EventIcon />,
-          path: '/admin/leaves',
-        },
-        {
-          text: 'Swap Requests',
-          icon: <SwapHorizIcon />,
-          path: '/admin/swaps',
         },
         {
           text: 'Reports',
